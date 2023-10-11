@@ -1,4 +1,4 @@
-CREATE TABLE User (
+CREATE TABLE Users (
     id UNIQUE INT NOT NULL,
     name VARCHAR NOT NULL,
     PRIMARY KEY (id)
@@ -8,7 +8,7 @@ CREATE TABLE OIDCSubject (
     sub VARCHAR UNIQUE,
     user INT,
     PRIMARY KEY (sub),
-    FOREIGN KEY (user) REFERENCES User(id)
+    FOREIGN KEY (user) REFERENCES Users(id)
 );
 
 -- CREATE TABLE Scale (
@@ -17,7 +17,7 @@ CREATE TABLE OIDCSubject (
 --     PRIMARY KEY (id)
 -- );
 
-CREATE TABLE Course (
+CREATE TABLE Courses (
     id UNIQUE INT NOT NULL,
     name VARCHAR NOT NULL,
     -- scale INT NOT NULL,
@@ -34,11 +34,11 @@ CREATE TABLE ScaleMark (
     grade_point REAL NOT NULL,
     PRIMARY KEY (course, score)
     -- PRIMARY KEY (scale, score)
-    FOREIGN KEY (course) REFERENCES Course(id)
+    FOREIGN KEY (course) REFERENCES Courses(id)
     -- FOREIGN KEY (scale) REFERENCES Scale(id)
 );
 
-CREATE TABLE Enrollment (
+CREATE TABLE Enrollments (
     id UNIQUE INT NOT NULL,
     course INT NOT NULL,
     student INT NULL,
@@ -46,19 +46,19 @@ CREATE TABLE Enrollment (
     email VARCHAR NULL;
     metadata VARCHAR,
     PRIMARY KEY (id),
-    FOREIGN KEY (course) REFERENCES Course(id),
-    FOREIGN KEY (student) REFERENCES User(id)
+    FOREIGN KEY (course) REFERENCES Courses(id),
+    FOREIGN KEY (student) REFERENCES Users(id)
 );
 
 CREATE TABLE Instructs (
     course INT NOT NULL,
     instrucor INT NOT NULL,
     PRIMARY KEY (course, instrucor),
-    FOREIGN KEY (course) REFERENCES Course(id),
-    FOREIGN KEY (instrucor) REFERENCES User(id)
+    FOREIGN KEY (course) REFERENCES Courses(id),
+    FOREIGN KEY (instrucor) REFERENCES Users(id)
 );
 
-CREATE TABLE Weight (
+CREATE TABLE Weights (
     id UNIQUE INT NOT NULL,
     course INT NOT NULL,
     name VARCHAR NOT NULL,
@@ -66,24 +66,24 @@ CREATE TABLE Weight (
     expected_max_score REAL NULL,
     drop_n INT NOT NULL,
     PRIMARY KEY (id),
-    FOREIGN KEY (course) REFERENCES Course(id)
+    FOREIGN KEY (course) REFERENCES Courses(id)
 );
 
-CREATE TABLE Assignment (
+CREATE TABLE Assignments (
     id UNIQUE INT NOT NULL,
     weight INT NOT NULL,
     name VARCHAR NOT NULL,
     max_score REAL,
     PRIMARY KEY (id),
-    FOREIGN KEY (weight) REFERENCES Weight(id)
+    FOREIGN KEY (weight) REFERENCES Weights(id)
 );
 
-CREATE TABLE Evaluation (
+CREATE TABLE Evaluations (
     assignment INT NOT NULL,
     enrollee INT NOT NULL,
     score REAL NOT NULL,
     evaluated REAL NOT NULL,
     PRIMARY KEY (assignment, enrollee),
-    FOREIGN KEY (assignment) REFERENCES Assignment(id),
-    FOREIGN KEY (enrollee) REFERENCES Enrollment(id)
+    FOREIGN KEY (assignment) REFERENCES Assignments(id),
+    FOREIGN KEY (enrollee) REFERENCES Enrollments(id)
 );

@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "dedent": "^1.5.1",
+    "sql-template-strings": "^2.2.2"
+  }
+}
