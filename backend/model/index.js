@@ -82,3 +82,27 @@ export class Course {
         return {id: this.id, name: this.name, credits: this.credits};
     }
 }
+
+export class Scale {
+    constructor(marks) {
+        this.marks = marks.map((obj) => {
+            const { score, mark, grade_point } = obj;
+            return { score, mark, grade_point };
+        })
+        
+    }
+
+    static async findByCourseId(courseId) {
+        const result = await db.query(sql`
+            SELECT score, mark, grade_point
+            FROM ScaleMarks
+            WHERE course=${courseId};
+        `);
+
+        return new Scale(result.rows);
+    }
+
+    toJSON() {
+        return {marks: this.marks};
+    }
+}

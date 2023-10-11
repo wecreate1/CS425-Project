@@ -26,7 +26,7 @@ CREATE TABLE Courses (
     -- FOREIGN KEY (scale) REFERENCES Scale(id)
 );
 
-CREATE TABLE ScaleMark (
+CREATE TABLE ScaleMarks (
     course INT NOT NULL,
     -- scale INT NOT NULL,
     score REAL NOT NULL,
