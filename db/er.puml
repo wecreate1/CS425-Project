@@ -1,0 +1,67 @@
+@startuml ER Model
+entity User {
+    <u>id
+    name
+}
+
+entity OIDCSubject {
+    <u>sub
+    <u>user
+}
+
+entity Course {
+    <u>id
+    name
+    credits
+}
+
+entity ScaleMark {
+    <u>course
+    <u>score
+    mark
+    grade_point
+}
+
+entity Enrollment {
+    <u>id
+    course
+    student
+    name
+    email
+    metadata
+}
+
+entity Weight {
+    <u>id
+    course
+    name
+    weight
+    expected_max_score
+    drop_n
+}
+
+entity Assignment {
+    <u>id
+    weight
+    name
+    max_score
+}
+
+entity Evaluation {
+    <u>assignment
+    <u>enrollee
+    score
+    evaluated
+}
+
+OIDCSubject::user --|> User::id : auth_subject
+User "0..*" -- "0..1" Enrollment : student_enrolled
+Enrollment --|> Course : course_enrollee
+User <|-- Course : instructor
+Weight --|> Course : course_weight
+ScaleMark --|> Course : course_grade_scale
+Assignment --|> Weight : assignment_type
+Assignment -- Enrollment : enrollee_eval
+(Assignment, Enrollment) . Evaluation
+
+@endum
