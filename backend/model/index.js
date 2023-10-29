@@ -286,11 +286,21 @@ export class Assignment {
         }
     }
 
-    static async findByWeight(id) {
+    static async findByWeight(weightId) {
         const result = await db.query(sql`
             SELECT id, weight, name, max_score
             FROM Assignments
-            WHERE weight = ${id};
+            WHERE weight = ${weightId};
+        `);
+
+        return result.rows.map(obj => new Assignment(obj));
+    }
+
+    static async findByCourse(courseId) {
+        const result = await db.query(sql`
+            SELECT Assignments.id, Assignments.weight, Assignments.name, Assignments.max_score
+            FROM Assignments INNER JOIN Weights ON Assignments.weight = Weights.id
+            WHERE course = ${courseId};
         `);
 
         return result.rows.map(obj => new Assignment(obj));
@@ -315,5 +325,64 @@ export class Assignment {
 
     forAdmin() {
         return {id: this.id, weight: this.weight, name: this.name, max_score: this.max_score};
+    }
+}
+
+export class Evaluation {
+    constructor(obj) {
+        ({assignment: this.assignment, enrollee: this.enrollee, score: this.score, evaluated: this.evaluated} = obj);
+    }
+
+    static async findByAssignmentIdAndEnrolleeId(assignmentId, enrolleeId) {
+        const result = await db.query(sql`
+            SELECT assignment, enrollee, score, evaluated
+            FROM Evaluations
+            WHERE assignment = ${assignmentId} AND enrollee = ${enrolleeId};
+        `);
+
+        if (result.rows.length == 1) {
+            return new Evaluation(result.rows[0]);
+        }
+    }
+
+    static async findAll() {
+        const result = await db.query(sql`
+            SELECT assignment, enrollee, score, evaluated
+            FROM Evaluations;
+        `);
+
+        return result.rows.map(obj => new Evaluation(obj));
+    }
+
+    static async findManyByAssignmentId(assignmentId) {
+        const result = await db.query(sql`
+            SELECT assignment, enrollee, score, evaluated
+            FROM Evaluations
+            WHERE assignment = ${assignmentId};
+        `);
+
+        return result.rows.map(obj => new Evaluation(obj));
+    }
+
+    static async findManyByEnrolleeId(enrolleeId) {
+        const result = await db.query(sql`
+            SELECT assignment, enrollee, score, evaluated
+            FROM Evaluations
+            WHERE enrollee = ${enrolleeId};
+        `);
+
+        return result.rows.map(obj => new Evaluation(obj));
+    }
+
+    forStudent() {
+        return {assignment: this.assignment, enrollee: this.enrollee, score: this.score, evaluated: this.evaluated};
+    }
+
+    forInstructor() {
+        return {assignment: this.assignment, enrollee: this.enrollee, score: this.score, evaluated: this.evaluated};
+    }
+
+    forAdmin() {
+        return {assignment: this.assignment, enrollee: this.enrollee, score: this.score, evaluated: this.evaluated};
     }
 }
