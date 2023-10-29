@@ -69,15 +69,19 @@ app.route('/api/v1/users')
     });
 // app.route('/api/v1/users/me'); // TODO: when auth is implemented
 app.route('/api/v1/users/:id')
-    .get(param('id').isInt(), validate, async (req, res) => {
-        const id = parseInt(req.params.id);
-        // TODO: assert id == authorized user
-        const user = await model.User.findById(id);
-        res.setRole(false /* isAdmin */ ? ROLE_ADMIN : ROLE_USER)
-        res.sendWithRole(user);
-    });
+    .get(
+        param('id').isInt(),
+        validate,
+        async (req, res) => {
+            const id = parseInt(req.params.id);
+            // TODO: assert id == authorized user
+            const user = await model.User.findById(id);
+            res.setRole(false /* isAdmin */ ? ROLE_ADMIN : ROLE_USER)
+            res.sendWithRole(user);
+        });
 app.route('/api/v1/courses')
-    .get(query('student').optional().isInt(),
+    .get(
+        query('student').optional().isInt(),
         query('instructor').optional().isInt(),
         validate,
         async (req, res) => {
@@ -116,16 +120,12 @@ app.route('/api/v1/courses')
             res.sendWithRole(courses);
     });
 app.route('/api/v1/courses/:id')
-    .get(param('id').isInt(),
-         query('for').isIn(['student', 'instructor', 'admin']),
-         validate,
-         async (req, res) => {
-            if (!validationResult(req).isEmpty()) {
-                res.sendStatus(400);
-                return;
-            }
-
-            let id = parseInt(req.params.id);
+    .get(
+        param('id').isInt(),
+        query('for').isIn(['student', 'instructor', 'admin']),
+        validate,
+        async (req, res) => {
+            const id = parseInt(req.params.id);
 
             // TODO: assert authorized user is enrolled in or instructs course
 
@@ -140,18 +140,14 @@ app.route('/api/v1/courses/:id')
             }
 
             res.sendWithRole(course);
-    });
+        });
 app.route('/api/v1/courses/:id/scale')
-    .get(param('id').isInt(),
-         query('for').isIn(['student', 'instructor', 'admin']),
-         validate,
-         async (req, res) => {
-            if (!validationResult(req).isEmpty()) {
-                res.sendStatus(400);
-                return;
-            }
-            
-            let id = parseInt(req.params.id);
+    .get(
+        param('id').isInt(),
+        query('for').isIn(['student', 'instructor', 'admin']),
+        validate,
+        async (req, res) => {
+            const id = parseInt(req.params.id);
 
             // TODO: assert authorized user is enrolled in or instructs course
 
@@ -166,12 +162,13 @@ app.route('/api/v1/courses/:id/scale')
             }
 
             res.sendWithRole(scale);
-    });
+        });
 app.route('/api/v1/enrollments')
-    .get(query('student').optional().isInt(),
-         query('course').optional().isInt(),
-         validate,
-         async (req, res) => {
+    .get(
+        query('student').optional().isInt(),
+        query('course').optional().isInt(),
+        validate,
+        async (req, res) => {
             const { student,  course } = req.query;
 
             if (student != undefined && course != undefined) {
@@ -202,16 +199,13 @@ app.route('/api/v1/enrollments')
             }
 
             res.sendWithRole(enrollments);
-    });
+        });
 app.route('/api/v1/enrollments/:id')
-    .get(param('id').isInt(),
-         query('for').isIn(['student', 'instructor', 'admin']),
-         validate,
-         async (req, res) => {
-            if (!validationResult(req).isEmpty()) {
-                res.sendStatus(400);
-                return;
-            }
+    .get(
+        param('id').isInt(),
+        query('for').isIn(['student', 'instructor', 'admin']),
+        validate,
+        async (req, res) => {
             const id = parseInt(req.params.id);
 
             // TODO: assert authorized user is enrolled in or instructs course
@@ -227,15 +221,12 @@ app.route('/api/v1/enrollments/:id')
             }
 
             res.sendWithRole(enrollment);
-         });
+        });
 app.route('/api/v1/instructs')
-    .get(query('instructor').isInt(),
+    .get(
+        query('instructor').isInt(),
         validate,
-         async (req, res) => {
-            if (!validationResult(req).isEmpty()) {
-                res.sendStatus(400);
-                return;
-            }
+        async (req, res) => {
             const { instructor } = req.query;
             const instructorId = parseInt(instructor);
             // TODO: auth
@@ -247,16 +238,13 @@ app.route('/api/v1/instructs')
                 res.setRole(ROLE_INSTRUCTOR);
             }
             res.sendWithRole(instructs);
-    });
+        });
 app.route('/api/v1/weights')
-    .get(query('course').optional().isInt(),
-         query('for').isIn(['student', 'instructor', 'admin']),
-         validate,
-         async (req, res) => {
-            if (!validationResult(req).isEmpty()) {
-                res.sendStatus(400);
-                return;
-            }
+    .get(
+        query('course').optional().isInt(),
+        query('for').isIn(['student', 'instructor', 'admin']),
+        validate,
+        async (req, res) => {
             const { course } = req.query;
 
             // TODO: auth
@@ -279,16 +267,13 @@ app.route('/api/v1/weights')
             }
 
             res.sendWithRole(weights);
-    });
+        });
 app.route('/api/v1/weights/:id')
-    .get(param('id').isInt(),
-         query('for').isIn(['student', 'instructor', 'admin']),
-         validate,
-         async (req, res) => {
-            if (!validationResult(req).isEmpty()) {
-                res.sendStatus(400);
-                return;
-            }
+    .get(
+        param('id').isInt(),
+        query('for').isIn(['student', 'instructor', 'admin']),
+        validate,
+        async (req, res) => {
             const id = parseInt(req.params.id);
 
             // TODO: auth
@@ -304,16 +289,13 @@ app.route('/api/v1/weights/:id')
             }
 
             res.sendWithRole(weight);
-         });
+        });
 app.route('/api/v1/assignments')
-    .get(query('weight').optional().isInt(),
-         query('for').isIn(['student', 'instructor', 'admin']),
-         validate,
-         async (req, res) => {
-            if (!validationResult(req).isEmpty()) {
-                res.sendStatus(400);
-                return;
-            }
+    .get(
+        query('weight').optional().isInt(),
+        query('for').isIn(['student', 'instructor', 'admin']),
+        validate,
+        async (req, res) => {
             const { weight } = req.query;
             // TODO: auth
             let assignments;
@@ -333,12 +315,13 @@ app.route('/api/v1/assignments')
             }
 
             res.sendWithRole(assignments);
-    });
+        });
 app.route('/api/v1/assignments/:id')
-    .get(param('id').isInt(),
-         query('for').isIn(['student', 'instructor', 'admin']),
-         validate,
-         async (req, res) => {
+    .get(
+        param('id').isInt(),
+        query('for').isIn(['student', 'instructor', 'admin']),
+        validate,
+        async (req, res) => {
             const id = parseInt(req.params.id);
             const assignment = await model.Assignment.findById(id);
             // TODO: auth
@@ -354,7 +337,11 @@ app.route('/api/v1/assignments/:id')
             res.sendWithRole(assignment);
         });
 app.route('/api/v1/evaluations')
-    .get(query('assignment').optional().isInt(), query('enrollee').optional().isInt(), query('for').isIn(['student', 'instructor', 'admin']), validate,
+    .get(
+        query('assignment').optional().isInt(),
+        query('enrollee').optional().isInt(),
+        query('for').isIn(['student', 'instructor', 'admin']),
+        validate,
          async (req, res) => {
             const { assignment, enrollee } = req.query;
             const assignmentId = parseInt(assignment);
@@ -381,6 +368,6 @@ app.route('/api/v1/evaluations')
             }
 
             res.sendWithRole(evaluations);
-    });
+        });
 // app.route('/api/v1/evaluations/:id');
 
