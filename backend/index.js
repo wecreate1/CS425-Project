@@ -4,44 +4,87 @@ import * as model from './model';
 import express from 'express';
 import { query, param, validationResult } from 'express-validator';
 
+function validate(req, res, next) {
+    if (!validationResult(req).isEmpty()) {
+        res.sendStatus(400);
+        return;
+    }
+    next();
+}
+
+const roleSym = Symbol('role');
+
+const ROLE_ADMIN = 1;
+const ROLE_USER = 2;
+const ROLE_STUDENT = 3;
+const ROLE_INSTRUCTOR = 4;
+const ROLE_INVALID = 0;
+
+function sendWithRole(res, role, val) {
+    if (role == ROLE_INVALID) {
+        res.sendStatus(400);
+    } else if (Array.isArray(val)) {
+        if (role == ROLE_ADMIN) {
+            res.sendJson(val.map(obj => obj.forAdmin()));
+        } else if (role == ROLE_USER) {
+            res.sendJson(val.map(obj => obj.forUser()));
+        } else if (role == ROLE_STUDENT) {
+            res.sendJson(val.map(obj => obj.forStudent()));
+        } else if (role == ROLE_INSTRUCTOR) {
+            res.sendJson(val.map(obj => obj.forInstructor()));
+        }
+    } else if (val == undefined) {
+        res.sendStatus(404);
+    } else {
+        if (role == ROLE_ADMIN) {
+            res.sendJson(val.forAdmin());
+        } else if (role == ROLE_USER) {
+            res.sendJson(val.forUser());
+        } else if (role == ROLE_STUDENT) {
+            res.sendJson(val.forStudent());
+        } else if (role == ROLE_INSTRUCTOR) {
+            res.sendJson(val.forInstructor());
+        }
+    }
+}
+
+function roleMw(req, res, next) {
+    res[roleSym] = ROLE_INVALID;
+    res.setRole = function(role) {this[roleSym] = role};
+    res.sendWithRole = function(val) {sendWithRole(this, this[roleSym], val)}
+    next();
+}
+
 const app = express();
 
 app.use(express.json());
+app.use(roleMw);
 
 app.route('/api/v1/users')
     .get(async (req, res) => {
         // TODO: assert that authorized user is allowed to do this
         const users = await model.User.findAll();
-        res.json(users.map(user => users.forAdmin()));
+        res.setRole(ROLE_ADMIN);
+        res.sendWithRole(users);
     });
 // app.route('/api/v1/users/me'); // TODO: when auth is implemented
 app.route('/api/v1/users/:id')
-    .get(param('id').isInt(), async (req, res) => {
-        if (!validationResult(req).isEmpty()) {
-            res.sendStatus(400);
-            return;
-        }
-        const id = parseInt(req.params.id);
-        // TODO: assert id == authorized user
-        const user = await model.User.findById(id);
-        if (user == undefined) {
-            res.sendStatus(404);
-            return;
-        }
-        if (false /* isAdmin */) {
-            res.json(user.forAdmin());
-        } else {
-            res.json(user.forUser());
-        }
-    });
-app.route('/api/v1/courses')
-    .get(query('student').optional().isInt(),
-        query('instructor').optional().isInt(),
+    .get(
+        param('id').isInt(),
+        validate,
         async (req, res) => {
-            if (!validationResult(req).isEmpty()) {
-                res.sendStatus(400);
-                return;
-            }
+            const id = parseInt(req.params.id);
+            // TODO: assert id == authorized user
+            const user = await model.User.findById(id);
+            res.setRole(false /* isAdmin */ ? ROLE_ADMIN : ROLE_USER)
+            res.sendWithRole(user);
+        });
+app.route('/api/v1/courses')
+    .get(
+        query('student').optional().isInt(),
+        query('instructor').optional().isInt(),
+        validate,
+        async (req, res) => {
 
             const { student, instructor } = req.query;
 
@@ -56,89 +99,76 @@ app.route('/api/v1/courses')
                 let studentId = parseInt(student);
                 // TODO: assert studentId == authorized user
                 courses = await model.Course.findManyByStudentId(studentId);
+                res.setRole(ROLE_STUDENT);
             } else if (instructor != undefined) {
                 let instructorId = parseInt(instructor);
                 // TODO: assert instructorId == authorized user
                 courses = await model.Course.findManyByInstructorId(instructorId);
+                res.setRole(ROLE_INSTRUCTOR);
             } else {
                 // TODO: assert that authorized user is allowed to do this
-                courses = await model.Course.findAll();
+                if (false /* isAdmin */) {
+                    courses = await model.Course.findAll();
+                    res.setRole(ROLE_ADMIN);
+                }
             }
 
             if (false /* isAdmin */) {
-                res.json(courses.map(course => course.forAdmin()));
-            } else if (student != undefined) {
-                res.json(courses.map(course => course.forStudent()));
-            } else if (instructor != undefined) {
-                res.json(courses.map(course => course.forInstructor()));
-            } else {
-                res.sendStatus(400);
-            }
-    });
-app.route('/api/v1/courses/:id')
-    .get(param('id').isInt(),
-         query('for').isIn(['student', 'instructor', 'admin']),
-         async (req, res) => {
-            if (!validationResult(req).isEmpty()) {
-                res.sendStatus(400);
-                return;
+                res.setRole(ROLE_ADMIN);
             }
 
-            let id = parseInt(req.params.id);
+            res.sendWithRole(courses);
+    });
+app.route('/api/v1/courses/:id')
+    .get(
+        param('id').isInt(),
+        query('for').isIn(['student', 'instructor', 'admin']),
+        validate,
+        async (req, res) => {
+            const id = parseInt(req.params.id);
 
             // TODO: assert authorized user is enrolled in or instructs course
 
             const course = await model.Course.findById(id);
-            if (course == undefined) {
-                res.sendStatus(404);
-                return;
-            }
+
             if (false /* isAdmin */) {
-                res.json(course.forAdmin());
+                res.setRole(ROLE_ADMIN);
             } else if (req.query.for == 'student') {
-                res.json(course.forStudent());
+                res.setRole(ROLE_STUDENT);
             } else if (req.query.for == 'instructor') {
-                res.json(course.forInstructor());
-            } else {
-                res.sendStatus(400);
+                res.setRole(ROLE_INSTRUCTOR);
             }
-    });
+
+            res.sendWithRole(course);
+        });
 app.route('/api/v1/courses/:id/scale')
-    .get(param('id').isInt(),
-         query('for').isIn(['student', 'instructor', 'admin']),
-         async (req, res) => {
-            if (!validationResult(req).isEmpty()) {
-                res.sendStatus(400);
-                return;
-            }
-            
-            let id = parseInt(req.params.id);
+    .get(
+        param('id').isInt(),
+        query('for').isIn(['student', 'instructor', 'admin']),
+        validate,
+        async (req, res) => {
+            const id = parseInt(req.params.id);
 
             // TODO: assert authorized user is enrolled in or instructs course
 
             const scale = await model.Scale.findByCourseId(id);
-            if (scale == undefined) {
-                res.sendStatus(404);
-                return;
-            }
+
             if (false /* isAdmin */) {
-                res.json(scale.forAdmin());
+                res.setRole(ROLE_ADMIN);
             } else if (req.query.for == 'student') {
-                res.json(scale.forStudent());
+                res.setRole(ROLE_STUDENT);
             } else if (req.query.for == 'instructor') {
-                res.json(scale.forInstructor());
-            } else {
-                res.sendStatus(400);
-            }
-    });
-app.route('/api/v1/enrollments')
-    .get(query('student').optional().isInt(),
-         query('course').optional().isInt(), async (req, res) => {
-            if (!validationResult(req).isEmpty()) {
-                res.sendStatus(400);
-                return;
+                res.setRole(ROLE_INSTRUCTOR);
             }
 
+            res.sendWithRole(scale);
+        });
+app.route('/api/v1/enrollments')
+    .get(
+        query('student').optional().isInt(),
+        query('course').optional().isInt(),
+        validate,
+        async (req, res) => {
             const { student,  course } = req.query;
 
             if (student != undefined && course != undefined) {
@@ -152,76 +182,69 @@ app.route('/api/v1/enrollments')
                 let studentId = parseInt(student);
                 // TODO: assert studentId == authorized user
                 enrollments = await model.Enrollment.findManyByStudentId(studentId);
+                res.setRole(ROLE_STUDENT);
             } else if (course != undefined) {
                 let courseId = parseInt(course);
                 // TODO: assert authorized user is instructor of course
                 enrollments = await model.Enrollment.findManyByCourseId(courseId);
+                res.setRole(ROLE_INSTRUCTOR);
             } else {
                 // TODO: assert that authorized user is allowed to do this
-                enrollments = await model.Enrollment.findAll();
+                if (false /* isAdmin */) {
+                    enrollments = await model.Enrollment.findAll();
+                }
             }
             if (false /* isAdmin */) {
-                res.json(enrollments.map(enrollment => enrollment.forAdmin()));
-            } else if (student != undefined) {
-                res.json(enrollments.map(enrollment => enrollment.forStudent()));
-            } else if (course != undefined) {
-                res.json(enrollments.map(enrollment => enrollment.forInstructor()));
-            } else {
-                res.sendStatus(400);
+                res.setRole(ROLE_ADMIN);
             }
-    });
+
+            res.sendWithRole(enrollments);
+        });
 app.route('/api/v1/enrollments/:id')
-    .get(param('id').isInt(),
-         query('for').isIn(['student', 'instructor', 'admin']),
-         async (req, res) => {
-            if (!validationResult(req).isEmpty()) {
-                res.sendStatus(400);
-                return;
-            }
+    .get(
+        param('id').isInt(),
+        query('for').isIn(['student', 'instructor', 'admin']),
+        validate,
+        async (req, res) => {
             const id = parseInt(req.params.id);
 
             // TODO: assert authorized user is enrolled in or instructs course
 
             const enrollment = await model.Enrollment.findById(id);
-            if (enrollment == undefined) {
-                res.sendStatus(404);
-                return;
-            }
+
             if (false /* isAdmin */) {
-                res.json(enrollment.forAdmin());
+                res.setRole(ROLE_ADMIN);
             } else if (req.query.for == 'student') {
-                res.json(enrollment.forStudent());
+                res.setRole(ROLE_STUDENT);
             } else if (req.query.for == 'instructor') {
-                res.json(enrollment.forInstructor());
-            } else {
-                res.sendStatus(400);
+                res.setRole(ROLE_INSTRUCTOR);
             }
-         });
+
+            res.sendWithRole(enrollment);
+        });
 app.route('/api/v1/instructs')
-    .get(query('instructor').isInt(),
-         async (req, res) => {
-            if (!validationResult(req).isEmpty()) {
-                res.sendStatus(400);
-                return;
-            }
+    .get(
+        query('instructor').isInt(),
+        validate,
+        async (req, res) => {
             const { instructor } = req.query;
             const instructorId = parseInt(instructor);
             // TODO: auth
-            const instructss = await model.Instructs.findManyByInstructorId(instructorId);
+            const instructs = await model.Instructs.findManyByInstructorId(instructorId);
+
             if (false /* isAdmin */) {
-                res.json(instructss.map(instructs => instructs.forAdmin()));
+                res.setRole(ROLE_ADMIN);
             } else {
-                res.json(instructss.map(instructs => instructs.forInstructor()))
+                res.setRole(ROLE_INSTRUCTOR);
             }
-    });
+            res.sendWithRole(instructs);
+        });
 app.route('/api/v1/weights')
-    .get(query('course').optional().isInt(),
-         query('for').isIn(['student', 'instructor', 'admin']),
-         async (req, res) => {
-            if (!validationResult(req).isEmpty()) {
-                res.sendStatus(400);
-                return;
-            }
+    .get(
+        query('course').optional().isInt(),
+        query('for').isIn(['student', 'instructor', 'admin']),
+        validate,
+        async (req, res) => {
             const { course } = req.query;
 
             // TODO: auth
@@ -236,51 +259,43 @@ app.route('/api/v1/weights')
             }
 
             if (false /* isAdmin */) {
-                res.json(weights.map(weight => weight.forAdmin()));
+                res.setRole(ROLE_ADMIN);
             } if (req.query.for == 'student') {
-                res.json(weights.map(weight => weight.forStudent()));
+                res.setRole(ROLE_STUDENT);
             } else if (req.query.for == 'instructor') {
-                res.json(weights.map(weight => weight.forInstructor()));
-            } else {
-                res.sendStatus(400);
+                res.setRole(ROLE_INSTRUCTOR);
             }
 
-    });
+            res.sendWithRole(weights);
+        });
 app.route('/api/v1/weights/:id')
-    .get(param('id').isInt(),
-         query('for').isIn(['student', 'instructor', 'admin']),
-         async (req, res) => {
-            if (!validationResult(req).isEmpty()) {
-                res.sendStatus(400);
-                return;
-            }
+    .get(
+        param('id').isInt(),
+        query('for').isIn(['student', 'instructor', 'admin']),
+        validate,
+        async (req, res) => {
             const id = parseInt(req.params.id);
 
             // TODO: auth
 
             const weight = await model.Weight.findById(id);
-            if (weight == undefined) {
-                res.sendStatus(404);
-                return;
-            }
+
             if (false /* isAdmin */) {
-                res.json(weight.forAdmin())
+                res.setRole(ROLE_ADMIN);
             } else if (req.query.for == 'student') {
-                res.json(weight.forStudent());
+                res.setRole(ROLE_STUDENT);
             } else if (req.query.for == 'instructor') {
-                res.json(weight.forInstructor());
-            } else {
-                res.sendStatus(400);
+                res.setRole(ROLE_INSTRUCTOR);
             }
-         });
+
+            res.sendWithRole(weight);
+        });
 app.route('/api/v1/assignments')
-    .get(query('weight').optional().isInt(),
-         query('for').isIn(['student', 'instructor', 'admin']),
-         async (req, res) => {
-            if (!validationResult(req).isEmpty()) {
-                res.sendStatus(400);
-                return;
-            }
+    .get(
+        query('weight').optional().isInt(),
+        query('for').isIn(['student', 'instructor', 'admin']),
+        validate,
+        async (req, res) => {
             const { weight } = req.query;
             // TODO: auth
             let assignments;
@@ -292,44 +307,67 @@ app.route('/api/v1/assignments')
             }
 
             if (false /* isAdmin */) {
-                res.json(assignments.map(assignment => assignment.forAdmin()));
+                res.setRole(ROLE_ADMIN);
             } else if (req.query.for == 'student') {
-                res.json(assignments.map(assignment => assignment.forStudent()));
+                res.setRole(ROLE_STUDENT);
             } else if (req.query.for == 'instructor') {
-                res.json(assignments.map(assignment => assignment.forInstructor()));
-            } else {
-                res.sendStatus(400);
-            }
-    });
-app.route('/api/v1/assignments/:id')
-    .get(param('id').isInt(),
-         query('for').isIn(['student', 'instructor', 'admin']),
-         async (req, res) => {
-            if (!validationResult(req).isEmpty()) {
-                res.sendStatus(400);
-                return;
+                res.setRole(ROLE_INSTRUCTOR);
             }
 
+            res.sendWithRole(assignments);
+        });
+app.route('/api/v1/assignments/:id')
+    .get(
+        param('id').isInt(),
+        query('for').isIn(['student', 'instructor', 'admin']),
+        validate,
+        async (req, res) => {
             const id = parseInt(req.params.id);
-            const assignment = model.Assignment.findById(id);
+            const assignment = await model.Assignment.findById(id);
             // TODO: auth
-            if (assignment == undefined) {
-                res.sendStatus(404);
-                return;
-            }
+
             if (false /* isAdmin */) {
-                res.json(assignment.forAdmin())
+                res.setRole(ROLE_ADMIN);
             } else if (req.query.for == 'student') {
-                res.json(assignment.forStudent());
+                res.setRole(ROLE_STUDENT);
             } else if (req.query.for == 'instructor') {
-                res.json(assignment.forInstructor());
-            } else {
-                res.sendStatus(400);
+                res.setRole(ROLE_INSTRUCTOR);
             }
+
+            res.sendWithRole(assignment);
         });
 app.route('/api/v1/evaluations')
-    .get((req, res) => {
-        const { assignment, weight, course, enrollee, student, instructor } = req.query;
-    });
-app.route('/api/v1/evaluations/:id');
+    .get(
+        query('assignment').optional().isInt(),
+        query('enrollee').optional().isInt(),
+        query('for').isIn(['student', 'instructor', 'admin']),
+        validate,
+         async (req, res) => {
+            const { assignment, enrollee } = req.query;
+            const assignmentId = parseInt(assignment);
+            const enrolleeId = parseInt(enrollee);
+
+            let evaluations;
+
+            // TODO: auth
+
+            if (assignment != undefined && enrollee != undefined) {
+                evaluations = await model.Evaluation.findByAssignmentIdAndEnrolleeId(assignmentId, enrolleeId);
+            } else if (assignment != undefined) {
+                evaluations = await model.Evaluation.findManyByAssignmentId(assignmentId);
+            } else if (enrolleeId != undefined) {
+                evaluations = await model.Evaluation.findManyByEnrolleeId(enrolleeId);
+            }
+
+            if (false /* isAdmin */) {
+                res.setRole(ROLE_ADMIN);
+            } else if (role == 'student') {
+                res.setRole(ROLE_STUDENT);
+            } else if (role == 'instructor') {
+                res.setRole(ROLE_INSTRUCTOR);
+            }
+
+            res.sendWithRole(evaluations);
+        });
+// app.route('/api/v1/evaluations/:id');
 
