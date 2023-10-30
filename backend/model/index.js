@@ -104,7 +104,8 @@ export class Scale {
         const result = await db.query(sql`
             SELECT score, mark, grade_point
             FROM ScaleMarks
-            WHERE course=${courseId};
+            WHERE course=${courseId}
+            ORDER BY score;
         `);
 
         return new Scale(result.rows);
@@ -222,13 +223,13 @@ export class Instructs {
 
 export class Weight {
     constructor(obj) {
-        ({id: this.id, course: this.coure, name: this.name, weight: this.weight, expected_max_score: this.expected_max_score, drop_n: this.drop_n} = obj);
+        ({id: this.id, course: this.coure, name: this.name, weight: this.weight, expected_max_score: this.expected_max_score, drop_n: this.drop_n, current_max_score: this.current_max_score} = obj);
     }
 
     static async findById(id) {
         const result = await db.query(sql`
-            SELECT id, course, name, weight, expected_max_score, drop_n
-            FROM Weights
+            SELECT id, course, name, weight, expected_max_score, drop_n, current_max_score
+            FROM WeightsExtended
             WHERE id=${id};
         `);
 
@@ -239,8 +240,8 @@ export class Weight {
 
     static async findManyByCourseId(courseId) {
         const result = await db.query(sql`
-            SELECT id, course, name, weight, expected_max_score, drop_n
-            FROM Weights
+            SELECT id, course, name, weight, expected_max_score, drop_n, current_max_score
+            FROM WeightsExtended
             WHERE course=${courseId};
         `);
 
@@ -249,23 +250,23 @@ export class Weight {
 
     static async findAll() {
         const result = await db.query(sql`
-            SELECT id, course, name, weight, expected_max_score, drop_n
-            FROM Weights;
+            SELECT id, course, name, weight, expected_max_score, drop_n, current_max_score
+            FROM WeightsExtended;
         `);
 
         return result.rows.map(obj => new Weight(obj));
     }
 
     forStudent() {
-        return {id: this.id, course: this.id, name: this.name, weight: this.weight, expected_max_score: this.expected_max_score, drop_n: this.drop_n};
+        return {id: this.id, course: this.id, name: this.name, weight: this.weight, expected_max_score: this.expected_max_score, drop_n: this.drop_n, current_max_score: this.current_max_score};
     }
 
     forInstructor() {
-        return {id: this.id, course: this.id, name: this.name, weight: this.weight, expected_max_score: this.expected_max_score, drop_n: this.drop_n};
+        return {id: this.id, course: this.id, name: this.name, weight: this.weight, expected_max_score: this.expected_max_score, drop_n: this.drop_n, current_max_score: this.current_max_score};
     }
 
     forAdmin() {
-        return {id: this.id, course: this.id, name: this.name, weight: this.weight, expected_max_score: this.expected_max_score, drop_n: this.drop_n};
+        return {id: this.id, course: this.id, name: this.name, weight: this.weight, expected_max_score: this.expected_max_score, drop_n: this.drop_n, current_max_score: this.current_max_score};
     }
 }
 
@@ -306,7 +307,7 @@ export class Assignment {
         return result.rows.map(obj => new Assignment(obj));
     }
 
-    static async findAll(id) {
+    static async findAll() {
         const result = await db.query(sql`
             SELECT id, weight, name, max_score
             FROM Assignments;
@@ -384,5 +385,123 @@ export class Evaluation {
 
     forAdmin() {
         return {assignment: this.assignment, enrollee: this.enrollee, score: this.score, evaluated: this.evaluated};
+    }
+}
+
+export class EvaluatedWeight {
+    constructor(obj) {
+        ({enrollee: this.enrollee, weight_id: this.weight_id, total_score: this.total_score, total_evaluated: this.total_evaluated} = obj);
+    }
+
+    static async findByWeightIdAndEnrolleeId(weightId, enrolleeId) {
+        const result = await db.query(sql`
+            SELECT enrollee, weight_id, total_score, total_evaluated
+            FROM EvaluatedWeights
+            WHERE weight_id=${weightId} AND enrollee=${enrolleeId};
+        `);
+
+        if (result.rows.length == 1) {
+            return new EvaluatedWeight(result.rows[0]);
+        }
+    }
+
+    static async findManyByWeightId(weightId) {
+        const result = await db.query(sql`
+            SELECT enrollee, weight_id, total_score, total_evaluated
+            FROM EvaluatedWeights
+            WHERE weight_id=${weightId};
+        `);
+
+        return result.rows.map(obj => new EvaluatedWeight(obj));
+    }
+
+    static async findManyByEnrolleeId(enrolleeId) {
+        const result = await db.query(sql`
+            SELECT enrollee, weight_id, total_score, total_evaluated
+            FROM EvaluatedWeights
+            WHERE enrollee=${enrolleeId};
+        `);
+
+        return result.rows.map(obj => new EvaluatedWeight(obj));
+    }
+
+    static async findAll() {
+        const result = await db.query(sql`
+            SELECT enrollee, weight_id, total_score, total_evaluated
+            FROM EvaluatedWeights;
+        `);
+
+        return result.rows.map(obj => new EvaluatedWeight(obj));
+    }
+
+    forStudent() {
+        return {enrollee: this.enrollee, weight_id: this.weight_id, total_score: this.total_score, total_evaluated: this.total_evaluated};
+    }
+
+    forInstructor() {
+        return {enrollee: this.enrollee, weight_id: this.weight_id, total_score: this.total_score, total_evaluated: this.total_evaluated};
+    }
+
+    forAdmin() {
+        return {enrollee: this.enrollee, weight_id: this.weight_id, total_score: this.total_score, total_evaluated: this.total_evaluated};
+    }
+}
+
+export class EvaluatedCourse {
+    constructor(obj) {
+        ({enrollee: this.enrollee, course: this.course, current_weighted_score: this.current_weighted_score, current_evaluated: this.current_evaluated, expected_weighted_score: this.expected_weighted_score, expected_evaluated: this.expected_evaluated} = obj);
+    }
+
+    static async findByCourseIdAndEnrolleeId(courseId, enrolleeId) {
+        const result = await db.query(sql`
+            SELECT enrollee, course, current_weighted_score, current_evaluated, expected_weighted_score, expected_evaluated
+            FROM EvaluatedCourses
+            WHERE course=${courseId} AND enrollee=${enrolleeId};
+        `);
+
+        if (result.rows.length == 1) {
+            return new EvaluatedWeight(result.rows[0]);
+        }
+    }
+
+    static async findManyByCourseId(courseId) {
+        const result = await db.query(sql`
+            SELECT enrollee, course, current_weighted_score, current_evaluated, expected_weighted_score, expected_evaluated
+            FROM EvaluatedCourses
+            WHERE course=${courseId};
+        `);
+
+        return result.rows.map(obj => new EvaluatedWeight(obj));
+    }
+
+    static async findManyByEnrolleeId(enrolleeId) {
+        const result = await db.query(sql`
+            SELECT enrollee, course, current_weighted_score, current_evaluated, expected_weighted_score, expected_evaluated
+            FROM EvaluatedCourses
+            WHERE enrollee=${enrolleeId};
+        `);
+
+        return result.rows.map(obj => new EvaluatedWeight(obj));
+    }
+
+    static async findAll() {
+        const result = await db.query(sql`
+            SELECT enrollee, course, current_weighted_score, current_evaluated, expected_weighted_score, expected_evaluated
+            FROM EvaluatedCourses;
+        `);
+
+        return result.rows.map(obj => new EvaluatedWeight(obj));
+    }
+
+    forStudent() {
+        return {enrollee: this.enrollee, course: this.course, current_weighted_score: this.current_weighted_score, current_evaluated: this.current_evaluated, expected_weighted_score: this.expected_weighted_score, expected_evaluated: this.expected_evaluated};
+    }
+
+    forInstructor() {
+        return {enrollee: this.enrollee, course: this.course, current_weighted_score: this.current_weighted_score, current_evaluated: this.current_evaluated, expected_weighted_score: this.expected_weighted_score, expected_evaluated: this.expected_evaluated};
+    }
+
+    forAdmin() {
+        return {enrollee: this.enrollee, course: this.course, current_weighted_score: this.current_weighted_score, current_evaluated: this.current_evaluated, expected_weighted_score: this.expected_weighted_score, expected_evaluated: this.expected_evaluated};
     }
 }

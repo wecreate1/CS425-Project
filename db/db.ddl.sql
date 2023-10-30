@@ -87,3 +87,31 @@ CREATE TABLE Evaluations (
     FOREIGN KEY (assignment) REFERENCES Assignments(id),
     FOREIGN KEY (enrollee) REFERENCES Enrollments(id)
 );
+
+CREATE VIEW WeightsCalculated AS
+SELECT Weights.id AS id, SUM(Assignmets.max_score) AS current_max_score
+FROM Weights INNER JOIN Assignments ON Weights.id=Assignments.id
+GROUP BY Weights.id;
+
+CREATE VIEW WeightsExtended AS
+SELECT Weights.*, current_max_score
+FROM Weights INNER JOIN WeightsCalculated ON Weights.id=WeightsCalculated.id;
+
+-- CREATE VIEW EvaluationsExtended AS
+-- SELECT Evaluations.*, Assignments.weight AS weight
+-- FROM Evaluations INNER JOIN Assignments ON Evaluations.assignment=Assignments.id;
+
+CREATE VIEW EvaluatedWeights AS
+SELECT Evaluations.enrollee AS enrollee, Assignments.weight AS weight_id, SUM(Evaluations.score) AS total_score, SUM(Evaluations.evaluated) AS total_evaluated
+FROM Evaluations INNER JOIN Assignments ON Evaluations.assignment=Assignmets.id
+GROUP BY enrollee, Assignments.weight;
+
+CREATE VIEW EvaluatedCourses AS
+SELECT EvaluatedWeights.enrollee AS enrollee,
+       Weights.course AS course,
+       SUM(EvaluatedWeights.total_score*WeightsExtended.weight/WeightsExtended.current_max_score) AS current_weighted_score,
+       SUM(EvaluatedWeights.total_evaluated*WeightsExtended.weight/WeightsExtended.current_max_score) AS current_evaluated,
+       SUM(EvaluatedWeights.total_score*WeightsExtended.weight/WeightsExtended.expected_max_score) AS expected_weighted_score,
+       SUM(EvaluatedWeights.total_evaluated*WeightsExtended.weight/WeightsExtended.expected_max_score) AS expected_evaluated
+FROM EvaluatedWeights INNER JOIN WeightsExtended ON EvaluatedWeights.weight_id=Weights.id
+GROUP BY EvaluatedWeights.enrollee, Weights.course;
