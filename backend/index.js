@@ -342,7 +342,7 @@ app.route('/api/v1/evaluations')
         query('enrollee').optional().isInt(),
         query('for').isIn(['student', 'instructor', 'admin']),
         validate,
-         async (req, res) => {
+        async (req, res) => {
             const { assignment, enrollee } = req.query;
             const assignmentId = parseInt(assignment);
             const enrolleeId = parseInt(enrollee);
@@ -369,5 +369,73 @@ app.route('/api/v1/evaluations')
 
             res.sendWithRole(evaluations);
         });
+app.route('/api/v1/evaluations/weight')
+    .get(
+        query('weight').optional().isInt(),
+        query('enrollee').optional().isInt(),
+        query('for').isIn(['student', 'instructor', 'admin']),
+        validate,
+        async (req, res) => {
+            const { weight, enrollee } = req.query;
+            const weightId = parseInt(weight);
+            const enrolleeId = parseInt(enrollee);
+
+            let evaluatedWeights;
+
+            // TODO: auth
+
+            if (weight != undefined && enrollee != undefined) {
+                evaluatedWeights = await model.EvaluatedWeight.findByWeightIdAndEnrolleeId(weightId, enrolleeId);
+            } else if (weight != undefined) {
+                evaluatedWeights = await model.EvaluatedWeight.findManyByWeightId(weightId);
+            } else if (enrolleeId != undefined) {
+                evaluatedWeights = await model.EvaluatedWeight.findManyByEnrolleeId(enrolleeId);
+            }
+
+            if (false /* isAdmin */) {
+                res.setRole(ROLE_ADMIN);
+            } else if (role == 'student') {
+                res.setRole(ROLE_STUDENT);
+            } else if (role == 'instructor') {
+                res.setRole(ROLE_INSTRUCTOR);
+            }
+
+            res.sendWithRole(evaluatedWeights);
+        }
+    )
+app.route('/api/v1/evaluations/course')
+    .get(
+        query('course').optional().isInt(),
+        query('enrollee').optional().isInt(),
+        query('for').isIn(['student', 'instructor', 'admin']),
+        validate,
+        async (req, res) => {
+            const { course, enrollee } = req.query;
+            const courseId = parseInt(course);
+            const enrolleeId = parseInt(enrollee);
+
+            let evaluatedCourses;
+
+            // TODO: auth
+
+            if (course != undefined && enrollee != undefined) {
+                evaluatedCourses = await model.EvaluatedWeight.findByWeightIdAndEnrolleeId(courseId, enrolleeId);
+            } else if (course != undefined) {
+                evaluatedCourses = await model.EvaluatedWeight.findManyByWeightId(courseId);
+            } else if (enrolleeId != undefined) {
+                evaluatedCourses = await model.EvaluatedWeight.findManyByEnrolleeId(enrolleeId);
+            }
+
+            if (false /* isAdmin */) {
+                res.setRole(ROLE_ADMIN);
+            } else if (role == 'student') {
+                res.setRole(ROLE_STUDENT);
+            } else if (role == 'instructor') {
+                res.setRole(ROLE_INSTRUCTOR);
+            }
+
+            res.sendWithRole(evaluatedCourses);
+        }
+    )
 // app.route('/api/v1/evaluations/:id');
 
