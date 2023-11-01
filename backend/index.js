@@ -2,7 +2,7 @@ import * as db from './db';
 import { sql } from './db';
 import * as model from './model';
 import express from 'express';
-import { query, param, validationResult } from 'express-validator';
+import { query, param, validationResult, body } from 'express-validator';
 
 function validate(req, res, next) {
     if (!validationResult(req).isEmpty()) {
@@ -66,6 +66,21 @@ app.route('/api/v1/users')
         const users = await model.User.findAll();
         res.setRole(ROLE_ADMIN);
         res.sendWithRole(users);
+    })
+    .post(
+        body('name').isString(),
+        validate,
+        async (req, res) => {
+            // TODO: auth
+            const id = await model.User.create(req.body);
+            if (id == undefined) {
+                res.sendStatus(500);
+            } else {
+                res.status(201);
+                res.set("Location", `/api/v1/users/${id}`);
+                res.json({id});
+            }
+
     });
 // app.route('/api/v1/users/me'); // TODO: when auth is implemented
 app.route('/api/v1/users/:id')
@@ -78,6 +93,32 @@ app.route('/api/v1/users/:id')
             const user = await model.User.findById(id);
             res.setRole(false /* isAdmin */ ? ROLE_ADMIN : ROLE_USER)
             res.sendWithRole(user);
+        })
+    .put(
+        param('id').isInt(),
+        body('name').isString(),
+        validate,
+        async (req, res) => {
+            const id = parseInt(req.params.id);
+            const result = await model.User.update(id, req.body);
+            if (result) {
+                res.sendStatus(204);
+            } else {
+                res.sendStatus(500);
+            }
+        }
+    )
+    .delete(
+        param('id').isInt(),
+        validate,
+        async (req, res) => {
+            const id = parseInt(req.params.id);
+            const result = model.User.delete(id);
+            if (result) {
+                res.sendStatus(204);
+            } else {
+                res.sendStatus(500);
+            }
         });
 app.route('/api/v1/courses')
     .get(
@@ -353,6 +394,7 @@ app.route('/api/v1/evaluations')
 
             if (assignment != undefined && enrollee != undefined) {
                 evaluations = await model.Evaluation.findByAssignmentIdAndEnrolleeId(assignmentId, enrolleeId);
+                evaluations = evaluations == undefined ? [] : [evaluations];
             } else if (assignment != undefined) {
                 evaluations = await model.Evaluation.findManyByAssignmentId(assignmentId);
             } else if (enrolleeId != undefined) {
@@ -369,6 +411,32 @@ app.route('/api/v1/evaluations')
 
             res.sendWithRole(evaluations);
         });
+app.route('/api/v1/evaluations/e/:enrollee/a/:assignment')
+    .get(
+        param('enrollee').isInt(),
+        param('assignment').isInt(),
+        query('for').isIn(['student', 'instructor', 'admin']),
+        validate,
+        async (req, res) => {
+            const { assignment, enrollee } = req.query;
+            const assignmentId = parseInt(assignment);
+            const enrolleeId = parseInt(enrollee);
+
+            // TODO: auth
+
+            const evaluation = await model.Evaluation.findByAssignmentIdAndEnrolleeId(assignmentId, enrolleeId);
+
+            if (false /* isAdmin */) {
+                res.setRole(ROLE_ADMIN);
+            } else if (role == 'student') {
+                res.setRole(ROLE_STUDENT);
+            } else if (role == 'instructor') {
+                res.setRole(ROLE_INSTRUCTOR);
+            }
+
+            res.sendWithRole(evaluation);
+        }
+    )
 app.route('/api/v1/evaluations/weight')
     .get(
         query('weight').optional().isInt(),
@@ -386,6 +454,7 @@ app.route('/api/v1/evaluations/weight')
 
             if (weight != undefined && enrollee != undefined) {
                 evaluatedWeights = await model.EvaluatedWeight.findByWeightIdAndEnrolleeId(weightId, enrolleeId);
+                evaluatedWeights = evaluatedWeights == undefined ? [] : [evaluatedWeights];
             } else if (weight != undefined) {
                 evaluatedWeights = await model.EvaluatedWeight.findManyByWeightId(weightId);
             } else if (enrolleeId != undefined) {
@@ -402,8 +471,34 @@ app.route('/api/v1/evaluations/weight')
 
             res.sendWithRole(evaluatedWeights);
         }
-    )
-app.route('/api/v1/evaluations/course')
+    );
+app.route('/api/v1/evaluations/weight/e/:enrollee/w/:weight')
+    .get(
+        param('enrollee').isInt(),
+        param('weight').isInt(),
+        query('for').isIn(['student', 'instructor', 'admin']),
+        validate,
+        async (req, res) => {
+            const { weight, enrollee } = req.query;
+            const weightId = parseInt(weight);
+            const enrolleeId = parseInt(enrollee);
+
+            // TODO: auth
+
+            const evaluation = await model.EvaluatedWeight.findByWeightIdAndEnrolleeId(weightId, enrolleeId);
+
+            if (false /* isAdmin */) {
+                res.setRole(ROLE_ADMIN);
+            } else if (role == 'student') {
+                res.setRole(ROLE_STUDENT);
+            } else if (role == 'instructor') {
+                res.setRole(ROLE_INSTRUCTOR);
+            }
+
+            res.sendWithRole(evaluation);
+        }
+    );
+app.route('/api/v1/evaluations/course') // theese should take a student user as well
     .get(
         query('course').optional().isInt(),
         query('enrollee').optional().isInt(),
@@ -420,6 +515,7 @@ app.route('/api/v1/evaluations/course')
 
             if (course != undefined && enrollee != undefined) {
                 evaluatedCourses = await model.EvaluatedWeight.findByWeightIdAndEnrolleeId(courseId, enrolleeId);
+                evaluatedCourses = evaluatedCourses == undefined ? [] : [evaluatedCourses];
             } else if (course != undefined) {
                 evaluatedCourses = await model.EvaluatedWeight.findManyByWeightId(courseId);
             } else if (enrolleeId != undefined) {
@@ -436,6 +532,32 @@ app.route('/api/v1/evaluations/course')
 
             res.sendWithRole(evaluatedCourses);
         }
-    )
+    );
+app.route('/api/v1/evaluations/course/e/:enrollee/c/:course')
+    .get(
+        param('enrollee').isInt(),
+        param('course').isInt(),
+        query('for').isIn(['student', 'instructor', 'admin']),
+        validate,
+        async (req, res) => {
+            const { course, enrollee } = req.query;
+            const courseId = parseInt(course);
+            const enrolleeId = parseInt(enrollee);
+
+            // TODO: auth
+
+            const evaluation = await model.EvaluatedCourse.findByCourseIdAndEnrolleeId(courseId, enrolleeId);
+
+            if (false /* isAdmin */) {
+                res.setRole(ROLE_ADMIN);
+            } else if (role == 'student') {
+                res.setRole(ROLE_STUDENT);
+            } else if (role == 'instructor') {
+                res.setRole(ROLE_INSTRUCTOR);
+            }
+
+            res.sendWithRole(evaluation);
+        }
+    );
 // app.route('/api/v1/evaluations/:id');
 

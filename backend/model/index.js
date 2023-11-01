@@ -1,5 +1,6 @@
 import * as db from './db';
 import { sql } from './db';
+import * as pg_format from 'pg-format';
 
 export class User {
     constructor(obj) {
@@ -25,6 +26,37 @@ export class User {
         `);
 
         return result.rows.map((obj) => new User(obj));
+    }
+
+    static async create(obj) {
+        const result = await db.query(sql`
+            INSERT INTO Users (name)
+            VALUES (${obj.name})
+            RETURNING id;
+        `)
+
+        if (result.rows.length  == 1) {
+            return result.rows.length[0].id;
+        }
+    }
+
+    static async update(id, obj) {
+        const result = await db.query(sql`
+            UPDATE Users
+            SET name=${obj.name}
+            WHERE id=${id}
+        `);
+
+        return result.rowCount == 1;
+    }
+
+    static async delete(id) {
+        const result = await db.query(sql`
+            DELETE FROM Users
+            WHERE id=${id};
+        `);
+
+        return result.rowCount == 1;
     }
 
     forUser() {
@@ -78,6 +110,37 @@ export class Course {
         return result.rows.map((obj) => new Course(obj));
     }
 
+    static async create(obj) {
+        const result = await db.query(sql`
+            INSERT INTO Courses (name, credits)
+            VALUES (${obj.name}, ${obj.credits})
+            RETURNING id;
+        `)
+
+        if (result.rows.length  == 1) {
+            return result.rows.length[0].id;
+        }
+    }
+
+    static async update(id, obj) {
+        const result = await db.query(sql`
+            UPDATE Courses
+            SET name=${obj.name}, credits=${obj.credits}
+            WHERE id=${id}
+        `);
+
+        return result.rowCount == 1;
+    }
+
+    static async delete(id) {
+        const result = await db.query(sql`
+            DELETE FROM Courses
+            WHERE id=${id};
+        `);
+
+        return result.rowCount == 1;
+    }
+
     forStudent() {
         return {id: this.id, name: this.name, credits: this.credits};
     }
@@ -109,6 +172,40 @@ export class Scale {
         `);
 
         return new Scale(result.rows);
+    }
+
+    static async update(courseId, obj) {
+        const client = await db.getClient();
+        try {
+            await client.query('BEGIN');
+            await client.query(sql`
+                DELETE FROM ScaleMarks
+                WHERE course=${id};
+            `);
+            let marks_list = [];
+            if (obj.marks != undefined) {
+                for (const mark of obj.marks) {
+                    marks_list.push([courseId, obj.score, obj.mark, obj.grade_point])
+                }
+            }
+            await client.query(pg_format('INSERT INTO ScaleMarks (course, score, mark, grade_point) VALUES %L;', marks_list));
+            await client.query('COMMIT');
+        } catch (e) {
+            await db.query('ROLLBACK');
+            throw e;
+        } finally {
+            client.release();
+        }
+        return true;
+    }
+
+    static async delete(courseId) {
+        await db.query(sql`
+            DELETE FROM ScaleMarks
+            WHERE course=${courseId};
+        `)
+
+        return true;
     }
 
     forStudent() {
@@ -174,6 +271,57 @@ export class Enrollment {
         return result.rows.map((obj) => new Course(obj));
     }
 
+    static async create(courseId, obj) {
+        const result = await db.query(sql`
+            INSERT INTO Enrollments (course, name, email, metadata)
+            VALUES (${courseId}, ${obj.name}, ${obj.email}, ${obj.metadata})
+            RETURNING id;
+        `)
+
+        if (result.rows.length  == 1) {
+            return result.rows.length[0].id;
+        }
+    }
+
+    static async update(id, obj) {
+        const result = await db.query(sql`
+            UPDATE Enrollments
+            SET name=${obj.name}, email=${obj.email}, metadata=${obj.metadata}
+            WHERE id=${id}
+        `);
+
+        return result.rowCount == 1;
+    }
+
+    static async delete(id) {
+        const result = await db.query(sql`
+            DELETE FROM Enrollments
+            WHERE id=${id};
+        `);
+
+        return result.rowCount == 1;
+    }
+
+    static async linkStudent(id, studentId) {
+        const result = await db.query(sql`
+            UPDATE Enrollments
+            SET student=${studentId}
+            WHERE id=${id};
+        `);
+
+        return result.rowCount == 1;
+    }
+
+    static async unlinkStudent(id) {
+        const result = await db.query(sql`
+            UPDATE Enrollments
+            SET student=NULL
+            WHERE id=${id};
+        `);
+
+        return result.rowCount == 1;
+    }
+
     forStudent() {
         return {id: this.id, course: this.course, student: this.student, name: this.name};
     }
@@ -210,6 +358,24 @@ export class Instructs {
         `);
 
         return result.rows.map(obj => new Instructs(obj));
+    }
+
+    static async create(courseId, instructorId) {
+        const result = await db.query(sql`
+            INSERT INTO Instructs (course, instructor)
+            VALUES (${courseId}, ${instructorId});
+        `)
+
+        return true;
+    }
+
+    static async delete(courseId, instructorId) {
+        const result = await db.query(sql`
+            DELETE FROM Instructs
+            WHERE course=${courseId}, instructor=${instructorId};
+        `);
+
+        return result.rowCount == 1;
     }
 
     forInstructor() {
@@ -255,6 +421,37 @@ export class Weight {
         `);
 
         return result.rows.map(obj => new Weight(obj));
+    }
+
+    static async create(courseId, obj) {
+        const result = await db.query(sql`
+            INSERT INTO Weights (course, name, weight, expected_max_score, drop_n)
+            VALUES (${courseId}, ${name}, ${weight}, ${expected_max_score}, ${drop_n})
+            RETURNING id;
+        `);
+
+        if (result.rows.length == 1) {
+            return result.rows.length[0].id;
+        }
+    }
+
+    static async update(id, obj) {
+        const result = await db.query(sql`
+            UPDATE Weights
+            SET name=${obj.name}, weight=${obj.weight}, expected_max_score=${obj.expected_max_score}, drop_n=${obj.drop_n}
+            WHERE id=${id};
+        `);
+
+        return result.rowCount == 1;
+    }
+
+    static async delete(id) {
+        const result = db.await(sql`
+            DELETE FROM Weights
+            WHERE id=${id};
+        `);
+
+        return result.rowCount == 1;
     }
 
     forStudent() {
@@ -316,6 +513,37 @@ export class Assignment {
         return result.rows.map(obj => new Assignment(obj));
     }
 
+    static async create(weightId, obj) {
+        const result = await db.query(sql`
+            INSERT INTO Assignments (weight, name, max_score)
+            VALUES (${weightId}, ${obj.name}, ${obj.max_score})
+            RETURNING id;
+        `);
+
+        if (result.rows.length == 1) {
+            return result.rows[0].id;
+        }
+    }
+
+    static async update(id, obj) {
+        const result = await db.query(sql`
+            UPDATE Assignments
+            SET name=${obj.name}, max_score=${ob.max_score}
+            WHERE id=${id};
+        `);
+
+        return result.rowCount == 1;
+    }
+
+    static async delete(id) {
+        const result = await db.query(sql`
+            DELETE FROM Assignments
+            WHERE id=${id};
+        `);
+
+        return result.rowCount == 1;
+    }
+
     forStudent() {
         return {id: this.id, weight: this.weight, name: this.name, max_score: this.max_score};
     }
@@ -373,6 +601,34 @@ export class Evaluation {
         `);
 
         return result.rows.map(obj => new Evaluation(obj));
+    }
+
+    static async create(assignmentId, enrolleeId, obj) {
+        const result = await db.query(sql`
+            INSERT INTO Evaluations (assignment, enrollee, score, evaluated)
+            VALUES (${assignmentId}, ${enrolleeId}, ${obj.score}, ${obj.evaluated});
+        `);
+
+        return result.rowCount == 1;
+    }
+
+    static async update(assignmentId, enrolleeId, obj) {
+        const result = await db.query(sql`
+            UPDATE Evaluations
+            SET score=${obj.score}, evaluated=${obj.evaluated}
+            WHERE assignment=${assignmentId} AND enrollee=${obj.enrolleeId};
+        `);
+
+        return result.rowCount == 1;
+    }
+
+    static async delete(assignmentId, enrolleeId) {
+        const result = await db.query(sql`
+            DELETE FROM Evaluations
+            WHERE assignments=${assignmentId} AND enrollee=${enrolleeId};
+        `);
+
+        return result.rowCount == 1;
     }
 
     forStudent() {
