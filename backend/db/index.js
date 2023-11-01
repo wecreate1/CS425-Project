@@ -8,6 +8,10 @@ export const query = (text, param, callback) => {
     return pool.query(text, params, callback);
 }
 
+export const getClient = () => {
+    return pool.connect();
+}
+
 const sql = (...params) => {
     return dedent(sqlUtil(...params))
 }
