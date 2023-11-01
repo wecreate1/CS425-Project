@@ -87,3 +87,49 @@ Each OIDCSubject is associated with a user. The OIDCSubject provides a means for
 An OIDCSubject holds:
 
 - `sub`: the subject of the tokens provided by an authorization sevice for a user.
+
+# API
+
+GET /users
+POST /users
+GET /users/:id
+PUT /users/:id
+DELETE /users/:id
+GET /users/:id/enrollments
+POST /users/:id/enrollments/link
+GET /users/:id/instructs
+POST /users/:id/instructs
+
+GET /courses/:id
+PUT /courses/:id
+DELETE /courses/:id
+GET /courses/:id/courseEvaluations
+GET /courses/:id/courseEvaluations/:enrollee
+GET /courses/:id/enrollments
+POST /courses/:id/enrollments
+GET /courses/:id/scale
+PUT /courses/:id/scale
+GET /courses/:id/weights
+POST /courses/:id/weights
+
+GET /enrollments/:id
+PUT /enrollments/:id
+DELETE /enrollments/:id
+POST /enrollments/:id/getLink
+
+GET /weights/:id
+PUT /weights/:id
+DELETE /weights/:id
+GET /weights/:id/weightEvaluations
+GET /weights/:id/weightEvaluations/:enrollee
+GET /weights/:id/assignments
+POST /weights/:id/assignments
+
+GET /assignments/:id
+PUT /assignments/:id
+DELETE /assignments/:id
+GET /assignments/:id/evaluations
+POST /assignments/:id/evaluations
+GET /assignments/:id/evaluations/:enrollee
+PUT /assignments/:id/evaluations/:enrollee
+DELETE /assignments/:id/evaluations/:enrollee
