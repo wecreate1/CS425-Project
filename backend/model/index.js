@@ -616,7 +616,7 @@ export class Evaluation {
         const result = await db.query(sql`
             UPDATE Evaluations
             SET score=${obj.score}, evaluated=${obj.evaluated}
-            WHERE assignment=${assignmentId} AND enrollee=${obj.enrolleeId};
+            WHERE assignment=${assignmentId} AND enrollee=${enrolleeId};
         `);
 
         return result.rowCount == 1;
