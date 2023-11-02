@@ -129,7 +129,6 @@ GET /assignments/:id
 PUT /assignments/:id
 DELETE /assignments/:id
 GET /assignments/:id/evaluations
-POST /assignments/:id/evaluations
 GET /assignments/:id/evaluations/:enrollee
 PUT /assignments/:id/evaluations/:enrollee
 DELETE /assignments/:id/evaluations/:enrollee

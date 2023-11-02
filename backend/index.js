@@ -59,6 +59,10 @@ function isJSONNumber(val) {
     return typeof val == 'number' && isFinite(val);
 }
 
+function isJSONInteger(val) {
+    return typeof val == 'number' && isFinite(val) && Number.isInteger(val);
+}
+
 const app = express();
 
 app.use(express.json());
@@ -117,6 +121,7 @@ app.route('/users/:id/enrollments')
         param('id').isInt().toInt(),
         validate,
         async (req, res) => {
+            // should return both enrollment and course info
             const courses = await model.Course.findManyByStudentId(req.params.id);
             res.setRole(ROLE_STUDENT).sendWithRole(courses);
         }
@@ -249,75 +254,218 @@ app.route('/courses/:id/scale')
     );
 app.route('/courses/:id/weights')
     .get(
-
+        param('id').isInt().toInt(),
+        validate,
+        async (req, res) => {
+            const weights = await model.Weight.findManyByCourseId(req.params.id);
+            res.setRole(ROLE_ADMIN).sendWithRole(weights);
+        }
     )
     .post(
-
+        param('id').isInt().toInt(),
+        body('name').isString(),
+        body('weight').custom(isJSONNumber),
+        body('expected_max_score').custom(isJSONNumber),
+        body('drop_n').custom(isJSONInteger),
+        validate,
+        async (req, res) => {
+            const weightId = await model.Weight.create(req.params.id, req.body);
+            if (weightId == undefined) {
+                res.sendStatus(500);
+            } else {
+                res.status(201).set('Location', `/weights/${id}`).json({id:weightId});
+            }
+        }
     );
 app.route('/enrollments/:id')
     .get(
-
+        param('id').isInt().toInt(),
+        validate,
+        async (req, res) => {
+            const enrollment = await model.Enrollment.findById(req.params.id);
+            if (enrollment == undefined) {
+                res.sendStatus(404);
+            } else {
+                res.setRole(ROLE_ADMIN).sendWithRole(enrollment);
+            }
+        }
     )
     .put(
-
+        param('id').isInt().toInt(),
+        body('name').isString(),
+        body('email').isEmail(),
+        body('metadata').optional().isString(),
+        validate,
+        async (req, res) => {
+            const result = await model.Enrollment.update(req.params.id, req.body);
+            res.sendStatus(result ? 204 : 500);
+        }
     )
     .delete(
-
+        param('id').isInt().toInt(),
+        validate,
+        async (req, res) => {
+            const result = await model.Enrollment.delete(req.params.id);
+            res.sendStatus(result ? 204 : 500);
+        }
     );
 app.route('/enrollments/:id/getLink')
     .post(
-
+        async (req, res) => {
+            res.sendStatus(404);
+        }
     );
 app.route('/weights/:id')
     .get(
-
+        param('id').isInt().toInt(),
+        validate,
+        async (req, res) => {
+            const weight = await model.Weight.findById(req.params.id);
+            if (weight == undefined) {
+                res.sendStatus(404);
+            } else {
+                res.setRole(ROLE_ADMIN).sendWithRole(weight);
+            }
+        }
     )
     .put(
-
+        param('id').isInt().toInt(),
+        body('name').isString(),
+        body('weight').custom(isJSONNumber),
+        body('expected_max_score').custom(isJSONNumber),
+        body('drop_n').custom(isJSONInteger),
+        validate,
+        async (req, res) => {
+            const result = await model.Weight.update(req.params.id, req.body);
+            res.sendStatus(result ? 204 : 500);
+        }
     )
     .delete(
-
+        param('id').isInt().toInt(),
+        validate,
+        async (req, res) => {
+            const result = await model.Weight.delete(req.params.id);
+            res.sendStatus(result ? 204 : 500);
+        }
     );
 app.route('/weights/:id/weightEvaluations')
     .get(
-
+        param('id').isInt().toInt(),
+        validate,
+        async (req, res) => {
+            const evaluatedWeights = await model.EvaluatedWeight.findManyByWeightId(req.params.id);
+            res.setRole(ROLE_ADMIN).sendWithRole(evaluatedWeights);
+        }
     );
 app.route('/weights/:id/weightEvaluations/:enrollee')
     .get(
-
+        param('id').isInt().toInt(),
+        param('enrollee').isInt().toInt(),
+        validate,
+        async (req, res) => {
+            const evaluatedWeight = await model.EvaluatedWeight.findByWeightIdAndEnrolleeId(req.params.id, req.params.enrollee);
+            if (evaluatedWeight == undefined) {
+                res.sendStatus(404);
+            } else {
+                res.setRole(ROLE_ADMIN).sendWithRole(evaluatedWeight);
+            }
+        }
     );
 app.route('/weights/:id/assignments')
     .get(
-
+        param('id').isInt().toInt(),
+        validate,
+        async (req, res) => {
+            const assignments = await model.Assignment.findByWeight(req.params.id);
+            res.setRole(ROLE_ADMIN).sendWithRole(assignments);
+        }
     )
     .post(
-
+        param('id').isInt().toInt(),
+        body('name').isString(),
+        body('max_score').custom(isJSONNumber),
+        validate,
+        async (req, res) => {
+            const assignmentId = await model.Assignment.create(req.params.id, req.body);
+            if (result == undefined) {
+                res.sendStatus(404);
+            } else {
+                res.status(201).set('Location', `/assignments/${assignmentId}`).json({id:assignmentId});
+            }
+        }
     );
 
 app.route('/assignments/:id')
     .get(
-        
+        param('id').isInt().toInt(),
+        validate,
+        async (req, res) => {
+            const assignment = await model.Assignment.findById(req.params.id);
+            if (assignment == undefined) {
+                res.sendStatus(404);
+            } else {
+                res.setRole(ROLE_ADMIN).sendWithRole(assignment);
+            }
+        }
     )
     .put(
-
+        param('id').isInt().toInt(),
+        body('name').isString(),
+        body('max_score').custom(isJSONNumber),
+        validate,
+        async (req, res) => {
+            const result = await model.Assignment.update(req.params.id);
+            res.sendStatus(result ? 204 : 500);
+        }
     )
     .delete(
-
+        param('id').isInt().toInt(),
+        validate,
+        async (req, res) => {
+            const result = await model.Assignment.delete(req.params.id);
+            res.sendStatus(result ? 204 : 500);
+        }
     );
 app.route('/assignments/:id/evaluations')
     .get(
-
-    )
-    .post(
-
+        param('id').isInt().toInt(),
+        validate,
+        async (req, res) => {
+            const evaluations = await model.Evaluation.findManyByAssignmentId(req.params.id);
+            res.setRole(ROLE_ADMIN).sendWithRole(evaluations);
+        }
     );
 app.route('/assignments/:id/evaluations/:enrollee')
     .get(
-
+        param('id').isInt().toInt(),
+        param('enrollee').isInt().toInt(),
+        validate,
+        async (req, res) => {
+            const evaluation = await model.Evaluation.findByAssignmentIdAndEnrolleeId(req.params.id, req.params.enrollee);
+            if (evaluation == undefined) {
+                res.sendStatus(404);
+            } else {
+                res.setRole(ROLE_ADMIN).sendWithRole(evaluation);
+            }
+        }
     )
     .put(
-
+        param('id').isInt().toInt(),
+        param('enrollee').isInt().toInt(),
+        body('score').custom(isJSONNumber),
+        body('evaluated').custom(isJSONNumber),
+        validate,
+        async (req, res) => {
+            const result = await model.Evaluation.put(req.params.id, req.params.enrollee, req.body);
+            res.sendStatus(result ? 204 : 500);
+        }
     )
     .delete(
-
+        param('id').isInt().toInt(),
+        param('enrollee').isInt().toInt(),
+        validate,
+        async (req, res) => {
+            const result = await model.Evaluation.delete(req.params.id, req.params.enrollee);
+            res.sendStatus(result ? 204 : 500);
+        }
     );
