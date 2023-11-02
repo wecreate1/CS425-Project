@@ -90,45 +90,45 @@ An OIDCSubject holds:
 
 # API
 
-GET /users
-POST /users
-GET /users/:id
-PUT /users/:id
-DELETE /users/:id
-GET /users/:id/enrollments
-POST /users/:id/enrollments/link
-GET /users/:id/instructs
-POST /users/:id/instructs
+- GET /users
+- POST /users
+- GET /users/:id
+- PUT /users/:id
+- DELETE /users/:id
+- GET /users/:id/enrollments
+- POST /users/:id/enrollments/link
+- GET /users/:id/instructs
+- POST /users/:id/instructs
 
-GET /courses/:id
-PUT /courses/:id
-DELETE /courses/:id
-GET /courses/:id/courseEvaluations
-GET /courses/:id/courseEvaluations/:enrollee
-GET /courses/:id/enrollments
-POST /courses/:id/enrollments
-GET /courses/:id/scale
-PUT /courses/:id/scale
-GET /courses/:id/weights
-POST /courses/:id/weights
+- GET /courses/:id
+- PUT /courses/:id
+- DELETE /courses/:id
+- GET /courses/:id/courseEvaluations
+- GET /courses/:id/courseEvaluations/:enrollee
+- GET /courses/:id/enrollments
+- POST /courses/:id/enrollments
+- GET /courses/:id/scale
+- PUT /courses/:id/scale
+- GET /courses/:id/weights
+- POST /courses/:id/weights
 
-GET /enrollments/:id
-PUT /enrollments/:id
-DELETE /enrollments/:id
-POST /enrollments/:id/getLink
+- GET /enrollments/:id
+- PUT /enrollments/:id
+- DELETE /enrollments/:id
+- POST /enrollments/:id/getLink
 
-GET /weights/:id
-PUT /weights/:id
-DELETE /weights/:id
-GET /weights/:id/weightEvaluations
-GET /weights/:id/weightEvaluations/:enrollee
-GET /weights/:id/assignments
-POST /weights/:id/assignments
+- GET /weights/:id
+- PUT /weights/:id
+- DELETE /weights/:id
+- GET /weights/:id/weightEvaluations
+- GET /weights/:id/weightEvaluations/:enrollee
+- GET /weights/:id/assignments
+- POST /weights/:id/assignments
 
-GET /assignments/:id
-PUT /assignments/:id
-DELETE /assignments/:id
-GET /assignments/:id/evaluations
-GET /assignments/:id/evaluations/:enrollee
-PUT /assignments/:id/evaluations/:enrollee
-DELETE /assignments/:id/evaluations/:enrollee
+- GET /assignments/:id
+- PUT /assignments/:id
+- DELETE /assignments/:id
+- GET /assignments/:id/evaluations
+- GET /assignments/:id/evaluations/:enrollee
+- PUT /assignments/:id/evaluations/:enrollee
+- DELETE /assignments/:id/evaluations/:enrollee
