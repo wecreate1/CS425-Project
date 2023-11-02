@@ -426,7 +426,7 @@ export class Weight {
     static async create(courseId, obj) {
         const result = await db.query(sql`
             INSERT INTO Weights (course, name, weight, expected_max_score, drop_n)
-            VALUES (${courseId}, ${name}, ${weight}, ${expected_max_score}, ${drop_n})
+            VALUES (${courseId}, ${obj.name}, ${obj.weight}, ${obj.expected_max_score}, ${obj.drop_n})
             RETURNING id;
         `);
 
@@ -603,24 +603,26 @@ export class Evaluation {
         return result.rows.map(obj => new Evaluation(obj));
     }
 
-    static async create(assignmentId, enrolleeId, obj) {
-        const result = await db.query(sql`
+    static async put(assignmentId, enrolleeId, obj) {
+        const result = await db.query(/* non-portable */ sql`
             INSERT INTO Evaluations (assignment, enrollee, score, evaluated)
-            VALUES (${assignmentId}, ${enrolleeId}, ${obj.score}, ${obj.evaluated});
+            VALUES (${assignmentId}, ${enrolleeId}, ${obj.score}, ${obj.evaluated})
+            ON CONFLICT DO UPDATE
+                SET score=EXCLUDED.score, evaluated=EXCLUDED.evaluated;
         `);
 
         return result.rowCount == 1;
     }
 
-    static async update(assignmentId, enrolleeId, obj) {
-        const result = await db.query(sql`
-            UPDATE Evaluations
-            SET score=${obj.score}, evaluated=${obj.evaluated}
-            WHERE assignment=${assignmentId} AND enrollee=${enrolleeId};
-        `);
+    // static async update(assignmentId, enrolleeId, obj) {
+    //     const result = await db.query(sql`
+    //         UPDATE Evaluations
+    //         SET score=${obj.score}, evaluated=${obj.evaluated}
+    //         WHERE assignment=${assignmentId} AND enrollee=${enrolleeId};
+    //     `);
 
-        return result.rowCount == 1;
-    }
+    //     return result.rowCount == 1;
+    // }
 
     static async delete(assignmentId, enrolleeId) {
         const result = await db.query(sql`

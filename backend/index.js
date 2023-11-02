@@ -50,9 +50,17 @@ function sendWithRole(res, role, val) {
 
 function roleMw(req, res, next) {
     res[roleSym] = ROLE_INVALID;
-    res.setRole = function(role) {this[roleSym] = role};
+    res.setRole = function(role) {this[roleSym] = role; return this};
     res.sendWithRole = function(val) {sendWithRole(this, this[roleSym], val)}
     next();
+}
+
+function isJSONNumber(val) {
+    return typeof val == 'number' && isFinite(val);
+}
+
+function isJSONInteger(val) {
+    return typeof val == 'number' && isFinite(val) && Number.isInteger(val);
 }
 
 const app = express();
@@ -60,504 +68,404 @@ const app = express();
 app.use(express.json());
 app.use(roleMw);
 
-app.route('/api/v1/users')
-    .get(async (req, res) => {
-        // TODO: assert that authorized user is allowed to do this
-        const users = await model.User.findAll();
-        res.setRole(ROLE_ADMIN);
-        res.sendWithRole(users);
-    })
+app.route('/users')
+    .get(
+        async (req, res) => {
+            res.sendStatus(403);
+        }
+    )
     .post(
         body('name').isString(),
         validate,
         async (req, res) => {
-            // TODO: auth
             const id = await model.User.create(req.body);
             if (id == undefined) {
                 res.sendStatus(500);
             } else {
-                res.status(201);
-                res.set("Location", `/api/v1/users/${id}`);
-                res.json({id});
+                res.status(201).set('Location', `/users/${id}`).json({id});
             }
-
-    });
-// app.route('/api/v1/users/me'); // TODO: when auth is implemented
-app.route('/api/v1/users/:id')
+        }
+    )
+app.route('/users/:id')
     .get(
-        param('id').isInt(),
+        param('id').isInt().toInt(),
         validate,
         async (req, res) => {
-            const id = parseInt(req.params.id);
-            // TODO: assert id == authorized user
-            const user = await model.User.findById(id);
-            res.setRole(false /* isAdmin */ ? ROLE_ADMIN : ROLE_USER)
-            res.sendWithRole(user);
-        })
+            const user = await model.User.findById(req.params.id);
+            if (user == undefined) {
+                res.sendStatus(404);
+            } else {
+                res.setRole(ROLE_USER).sendWithRole(user);
+            }
+        }
+    )
     .put(
-        param('id').isInt(),
+        param('id').isInt().toInt(),
         body('name').isString(),
         validate,
         async (req, res) => {
-            const id = parseInt(req.params.id);
-            const result = await model.User.update(id, req.body);
-            if (result) {
-                res.sendStatus(204);
-            } else {
-                res.sendStatus(500);
-            }
+            const result = await model.User.update(req.params.id, req.body);
+            res.sendStatus(result ? 204 : 500);
         }
     )
     .delete(
-        param('id').isInt(),
+        param('id').isInt().toInt(),
         validate,
         async (req, res) => {
-            const id = parseInt(req.params.id);
-            const result = model.User.delete(id);
-            if (result) {
-                res.sendStatus(204);
-            } else {
-                res.sendStatus(500);
-            }
-        });
-app.route('/api/v1/courses')
+            const result = await model.User.delete(req.params.id);
+            res.sendStatus(result ? 204 : 500);
+        }
+    );
+app.route('/users/:id/enrollments')
     .get(
-        query('student').optional().isInt(),
-        query('instructor').optional().isInt(),
+        param('id').isInt().toInt(),
         validate,
         async (req, res) => {
-
-            const { student, instructor } = req.query;
-
-            if (student != undefined && instructor != undefined) {
-                res.sendStatus(400);
-                return;
-            }
-
-            let courses;
-
-            if (student != undefined) {
-                let studentId = parseInt(student);
-                // TODO: assert studentId == authorized user
-                courses = await model.Course.findManyByStudentId(studentId);
-                res.setRole(ROLE_STUDENT);
-            } else if (instructor != undefined) {
-                let instructorId = parseInt(instructor);
-                // TODO: assert instructorId == authorized user
-                courses = await model.Course.findManyByInstructorId(instructorId);
-                res.setRole(ROLE_INSTRUCTOR);
-            } else {
-                // TODO: assert that authorized user is allowed to do this
-                if (false /* isAdmin */) {
-                    courses = await model.Course.findAll();
-                    res.setRole(ROLE_ADMIN);
-                }
-            }
-
-            if (false /* isAdmin */) {
-                res.setRole(ROLE_ADMIN);
-            }
-
-            res.sendWithRole(courses);
-    });
-app.route('/api/v1/courses/:id')
+            // should return both enrollment and course info
+            const courses = await model.Course.findManyByStudentId(req.params.id);
+            res.setRole(ROLE_STUDENT).sendWithRole(courses);
+        }
+    );
+app.route('/users/:id/enrollments/link')
     .get(
-        param('id').isInt(),
-        query('for').isIn(['student', 'instructor', 'admin']),
-        validate,
         async (req, res) => {
-            const id = parseInt(req.params.id);
-
-            // TODO: assert authorized user is enrolled in or instructs course
-
-            const course = await model.Course.findById(id);
-
-            if (false /* isAdmin */) {
-                res.setRole(ROLE_ADMIN);
-            } else if (req.query.for == 'student') {
-                res.setRole(ROLE_STUDENT);
-            } else if (req.query.for == 'instructor') {
-                res.setRole(ROLE_INSTRUCTOR);
-            }
-
-            res.sendWithRole(course);
-        });
-app.route('/api/v1/courses/:id/scale')
+            res.sendStatus(404);
+        }
+    );
+app.route('/users/:id/instructs')
     .get(
-        param('id').isInt(),
-        query('for').isIn(['student', 'instructor', 'admin']),
+        param('id').isInt().toInt(),
         validate,
         async (req, res) => {
-            const id = parseInt(req.params.id);
-
-            // TODO: assert authorized user is enrolled in or instructs course
-
-            const scale = await model.Scale.findByCourseId(id);
-
-            if (false /* isAdmin */) {
-                res.setRole(ROLE_ADMIN);
-            } else if (req.query.for == 'student') {
-                res.setRole(ROLE_STUDENT);
-            } else if (req.query.for == 'instructor') {
-                res.setRole(ROLE_INSTRUCTOR);
-            }
-
-            res.sendWithRole(scale);
-        });
-app.route('/api/v1/enrollments')
-    .get(
-        query('student').optional().isInt(),
-        query('course').optional().isInt(),
-        validate,
-        async (req, res) => {
-            const { student,  course } = req.query;
-
-            if (student != undefined && course != undefined) {
-                res.sendStatus(400);
-                return;
-            }
-
-            let enrollments;
-
-            if (student != undefined) {
-                let studentId = parseInt(student);
-                // TODO: assert studentId == authorized user
-                enrollments = await model.Enrollment.findManyByStudentId(studentId);
-                res.setRole(ROLE_STUDENT);
-            } else if (course != undefined) {
-                let courseId = parseInt(course);
-                // TODO: assert authorized user is instructor of course
-                enrollments = await model.Enrollment.findManyByCourseId(courseId);
-                res.setRole(ROLE_INSTRUCTOR);
-            } else {
-                // TODO: assert that authorized user is allowed to do this
-                if (false /* isAdmin */) {
-                    enrollments = await model.Enrollment.findAll();
-                }
-            }
-            if (false /* isAdmin */) {
-                res.setRole(ROLE_ADMIN);
-            }
-
-            res.sendWithRole(enrollments);
-        });
-app.route('/api/v1/enrollments/:id')
-    .get(
-        param('id').isInt(),
-        query('for').isIn(['student', 'instructor', 'admin']),
-        validate,
-        async (req, res) => {
-            const id = parseInt(req.params.id);
-
-            // TODO: assert authorized user is enrolled in or instructs course
-
-            const enrollment = await model.Enrollment.findById(id);
-
-            if (false /* isAdmin */) {
-                res.setRole(ROLE_ADMIN);
-            } else if (req.query.for == 'student') {
-                res.setRole(ROLE_STUDENT);
-            } else if (req.query.for == 'instructor') {
-                res.setRole(ROLE_INSTRUCTOR);
-            }
-
-            res.sendWithRole(enrollment);
-        });
-app.route('/api/v1/instructs')
-    .get(
-        query('instructor').isInt(),
-        validate,
-        async (req, res) => {
-            const { instructor } = req.query;
-            const instructorId = parseInt(instructor);
-            // TODO: auth
-            const instructs = await model.Instructs.findManyByInstructorId(instructorId);
-
-            if (false /* isAdmin */) {
-                res.setRole(ROLE_ADMIN);
-            } else {
-                res.setRole(ROLE_INSTRUCTOR);
-            }
-            res.sendWithRole(instructs);
-        });
-app.route('/api/v1/weights')
-    .get(
-        query('course').optional().isInt(),
-        query('for').isIn(['student', 'instructor', 'admin']),
-        validate,
-        async (req, res) => {
-            const { course } = req.query;
-
-            // TODO: auth
-
-            let weights;
-
-            if (course != undefined) {
-                const courseId = parseInt(course);
-                weights = await model.Weight.findManyByCourseId(courseId);
-            } else {
-                weights = await model.Weight.findAll();
-            }
-
-            if (false /* isAdmin */) {
-                res.setRole(ROLE_ADMIN);
-            } if (req.query.for == 'student') {
-                res.setRole(ROLE_STUDENT);
-            } else if (req.query.for == 'instructor') {
-                res.setRole(ROLE_INSTRUCTOR);
-            }
-
-            res.sendWithRole(weights);
-        });
-app.route('/api/v1/weights/:id')
-    .get(
-        param('id').isInt(),
-        query('for').isIn(['student', 'instructor', 'admin']),
-        validate,
-        async (req, res) => {
-            const id = parseInt(req.params.id);
-
-            // TODO: auth
-
-            const weight = await model.Weight.findById(id);
-
-            if (false /* isAdmin */) {
-                res.setRole(ROLE_ADMIN);
-            } else if (req.query.for == 'student') {
-                res.setRole(ROLE_STUDENT);
-            } else if (req.query.for == 'instructor') {
-                res.setRole(ROLE_INSTRUCTOR);
-            }
-
-            res.sendWithRole(weight);
-        });
-app.route('/api/v1/assignments')
-    .get(
-        query('weight').optional().isInt(),
-        query('for').isIn(['student', 'instructor', 'admin']),
-        validate,
-        async (req, res) => {
-            const { weight } = req.query;
-            // TODO: auth
-            let assignments;
-            if (weight != undefined) {
-                const weightId = parseInt(weight);
-                assignments = await model.Assignment.findByWeight(weightId);
-            } else {
-                assignments = await model.Assignment.findAll();
-            }
-
-            if (false /* isAdmin */) {
-                res.setRole(ROLE_ADMIN);
-            } else if (req.query.for == 'student') {
-                res.setRole(ROLE_STUDENT);
-            } else if (req.query.for == 'instructor') {
-                res.setRole(ROLE_INSTRUCTOR);
-            }
-
-            res.sendWithRole(assignments);
-        });
-app.route('/api/v1/assignments/:id')
-    .get(
-        param('id').isInt(),
-        query('for').isIn(['student', 'instructor', 'admin']),
-        validate,
-        async (req, res) => {
-            const id = parseInt(req.params.id);
-            const assignment = await model.Assignment.findById(id);
-            // TODO: auth
-
-            if (false /* isAdmin */) {
-                res.setRole(ROLE_ADMIN);
-            } else if (req.query.for == 'student') {
-                res.setRole(ROLE_STUDENT);
-            } else if (req.query.for == 'instructor') {
-                res.setRole(ROLE_INSTRUCTOR);
-            }
-
-            res.sendWithRole(assignment);
-        });
-app.route('/api/v1/evaluations')
-    .get(
-        query('assignment').optional().isInt(),
-        query('enrollee').optional().isInt(),
-        query('for').isIn(['student', 'instructor', 'admin']),
-        validate,
-        async (req, res) => {
-            const { assignment, enrollee } = req.query;
-            const assignmentId = parseInt(assignment);
-            const enrolleeId = parseInt(enrollee);
-
-            let evaluations;
-
-            // TODO: auth
-
-            if (assignment != undefined && enrollee != undefined) {
-                evaluations = await model.Evaluation.findByAssignmentIdAndEnrolleeId(assignmentId, enrolleeId);
-                evaluations = evaluations == undefined ? [] : [evaluations];
-            } else if (assignment != undefined) {
-                evaluations = await model.Evaluation.findManyByAssignmentId(assignmentId);
-            } else if (enrolleeId != undefined) {
-                evaluations = await model.Evaluation.findManyByEnrolleeId(enrolleeId);
-            }
-
-            if (false /* isAdmin */) {
-                res.setRole(ROLE_ADMIN);
-            } else if (role == 'student') {
-                res.setRole(ROLE_STUDENT);
-            } else if (role == 'instructor') {
-                res.setRole(ROLE_INSTRUCTOR);
-            }
-
-            res.sendWithRole(evaluations);
-        });
-app.route('/api/v1/evaluations/e/:enrollee/a/:assignment')
-    .get(
-        param('enrollee').isInt(),
-        param('assignment').isInt(),
-        query('for').isIn(['student', 'instructor', 'admin']),
-        validate,
-        async (req, res) => {
-            const { assignment, enrollee } = req.query;
-            const assignmentId = parseInt(assignment);
-            const enrolleeId = parseInt(enrollee);
-
-            // TODO: auth
-
-            const evaluation = await model.Evaluation.findByAssignmentIdAndEnrolleeId(assignmentId, enrolleeId);
-
-            if (false /* isAdmin */) {
-                res.setRole(ROLE_ADMIN);
-            } else if (role == 'student') {
-                res.setRole(ROLE_STUDENT);
-            } else if (role == 'instructor') {
-                res.setRole(ROLE_INSTRUCTOR);
-            }
-
-            res.sendWithRole(evaluation);
+            const courses = await model.Course.findManyByInstructorId(req.params.id);
+            res.setRole(ROLE_INSTRUCTOR).sendWithRole(courses);
         }
     )
-app.route('/api/v1/evaluations/weight')
-    .get(
-        query('weight').optional().isInt(),
-        query('enrollee').optional().isInt(),
-        query('for').isIn(['student', 'instructor', 'admin']),
+    .post(
+        param('id').isInt().toInt(),
+        body('name').isString(),
+        body('credits').custom(isJSONNumber),
         validate,
         async (req, res) => {
-            const { weight, enrollee } = req.query;
-            const weightId = parseInt(weight);
-            const enrolleeId = parseInt(enrollee);
-
-            let evaluatedWeights;
-
-            // TODO: auth
-
-            if (weight != undefined && enrollee != undefined) {
-                evaluatedWeights = await model.EvaluatedWeight.findByWeightIdAndEnrolleeId(weightId, enrolleeId);
-                evaluatedWeights = evaluatedWeights == undefined ? [] : [evaluatedWeights];
-            } else if (weight != undefined) {
-                evaluatedWeights = await model.EvaluatedWeight.findManyByWeightId(weightId);
-            } else if (enrolleeId != undefined) {
-                evaluatedWeights = await model.EvaluatedWeight.findManyByEnrolleeId(enrolleeId);
+            const courseId = await model.Course.create(req.body);
+            if (course == undefined) {
+                res.sendStatus(500);
+                return;
             }
-
-            if (false /* isAdmin */) {
-                res.setRole(ROLE_ADMIN);
-            } else if (role == 'student') {
-                res.setRole(ROLE_STUDENT);
-            } else if (role == 'instructor') {
-                res.setRole(ROLE_INSTRUCTOR);
+            const result = await model.Instructs.create(courseId, req.params.id);
+            if (!result) {
+                model.Course.delete(courseId);
+                res.sendStatus(500);
+                return
             }
-
-            res.sendWithRole(evaluatedWeights);
+            res.status(201).set('Location', `/courses/${id}`).json({id:courseId});
         }
     );
-app.route('/api/v1/evaluations/weight/e/:enrollee/w/:weight')
+app.route('/courses/:id')
     .get(
-        param('enrollee').isInt(),
-        param('weight').isInt(),
-        query('for').isIn(['student', 'instructor', 'admin']),
+        param('id').isInt().toInt(),
         validate,
         async (req, res) => {
-            const { weight, enrollee } = req.query;
-            const weightId = parseInt(weight);
-            const enrolleeId = parseInt(enrollee);
-
-            // TODO: auth
-
-            const evaluation = await model.EvaluatedWeight.findByWeightIdAndEnrolleeId(weightId, enrolleeId);
-
-            if (false /* isAdmin */) {
-                res.setRole(ROLE_ADMIN);
-            } else if (role == 'student') {
-                res.setRole(ROLE_STUDENT);
-            } else if (role == 'instructor') {
-                res.setRole(ROLE_INSTRUCTOR);
-            }
-
-            res.sendWithRole(evaluation);
+            const course = await model.Course.findById(req.params.id);
+            res.setRole(ROLE_ADMIN).sendWithRole(course);
         }
-    );
-app.route('/api/v1/evaluations/course') // theese should take a student user as well
-    .get(
-        query('course').optional().isInt(),
-        query('enrollee').optional().isInt(),
-        query('for').isIn(['student', 'instructor', 'admin']),
+    )
+    .put(
+        param('id').isInt().toInt(),
+        body('name').isString(),
+        body('credits').custom(isJSONNumber),
         validate,
         async (req, res) => {
-            const { course, enrollee } = req.query;
-            const courseId = parseInt(course);
-            const enrolleeId = parseInt(enrollee);
-
-            let evaluatedCourses;
-
-            // TODO: auth
-
-            if (course != undefined && enrollee != undefined) {
-                evaluatedCourses = await model.EvaluatedWeight.findByWeightIdAndEnrolleeId(courseId, enrolleeId);
-                evaluatedCourses = evaluatedCourses == undefined ? [] : [evaluatedCourses];
-            } else if (course != undefined) {
-                evaluatedCourses = await model.EvaluatedWeight.findManyByWeightId(courseId);
-            } else if (enrolleeId != undefined) {
-                evaluatedCourses = await model.EvaluatedWeight.findManyByEnrolleeId(enrolleeId);
-            }
-
-            if (false /* isAdmin */) {
-                res.setRole(ROLE_ADMIN);
-            } else if (role == 'student') {
-                res.setRole(ROLE_STUDENT);
-            } else if (role == 'instructor') {
-                res.setRole(ROLE_INSTRUCTOR);
-            }
-
-            res.sendWithRole(evaluatedCourses);
+            const result = await model.Course.update(req.params.id, req.body);
+            res.sendStatus(result ? 204 : 500);
         }
-    );
-app.route('/api/v1/evaluations/course/e/:enrollee/c/:course')
-    .get(
-        param('enrollee').isInt(),
-        param('course').isInt(),
-        query('for').isIn(['student', 'instructor', 'admin']),
+    )
+    .delete(
+        param('id').isInt().toInt(),
         validate,
         async (req, res) => {
-            const { course, enrollee } = req.query;
-            const courseId = parseInt(course);
-            const enrolleeId = parseInt(enrollee);
-
-            // TODO: auth
-
-            const evaluation = await model.EvaluatedCourse.findByCourseIdAndEnrolleeId(courseId, enrolleeId);
-
-            if (false /* isAdmin */) {
-                res.setRole(ROLE_ADMIN);
-            } else if (role == 'student') {
-                res.setRole(ROLE_STUDENT);
-            } else if (role == 'instructor') {
-                res.setRole(ROLE_INSTRUCTOR);
-            }
-
-            res.sendWithRole(evaluation);
+            const result = await model.Course.delete(req.params.id);
+            res.sendStatus(result ? 204 : 500);
         }
     );
-// app.route('/api/v1/evaluations/:id');
+app.route('/courses/:id/courseEvaluations')
+    .get(
+        param('id').isInt().toInt(),
+        validate,
+        async (req, res) => {
+            const courseEvaluations = await model.EvaluatedCourse.findManyByCourseId(req.params.id);
+            res.setRole(ROLE_ADMIN).sendWithRole(courseEvaluations);
+        }
+    );
+app.route('/courses/:id/courseEvaluations/:enrollee')
+    .get(
+        param('id').isInt().toInt(),
+        param('enrollee').isInt().toInt(),
+        validate,
+        async (req, res) => {
+            const courseEvaluation = await model.EvaluatedCourse.findByCourseIdAndEnrolleeId(req.params.id, req.params.enrollee);
+            res.setRole(ROLE_ADMIN).sendWithRole(courseEvaluation);
+        }
+    );
+app.route('/courses/:id/enrollments')
+    .get(
+        param('id').isInt().toInt(),
+        validate,
+        async (req, res) => {
+            const enrollments = await model.Enrollment.findManyByCourseId(req.params.id);
+            res.setRole(ROLE_ADMIN).sendWithRole(enrollments);
+        }
+    )
+    .post(
+        param('id').isInt().toInt(),
+        body('name').isString(),
+        body('email').optional().isEmail(),
+        body('metadata').optional().isString(),
+        validate,
+        async (req, res) => {
+            const enrollmentId = await model.Enrollment.create(req.params.id, req.body);
+            if (enrollmentId == undefined) {
+                res.sendStatus(500);
+            } else {
+                res.status(201).set('Location', `/enrollments/${enrollmentId}`).json({id:enrollmentId});
+            }
+        }
+    );
+app.route('/courses/:id/scale')
+    .get(
+        param('id').isInt().toInt(),
+        validate,
+        async (req, res) => {
+            const scale = await model.Scale.findByCourseId(req.params.id);
+            res.setRole(ROLE_ADMIN).sendWithRole(scale);
+        }
+    )
+    .put(
+        param('id').isInt().toInt(),
+        body('marks').isArray(),
+        body('marks.*.score').custom(isJSONNumber),
+        body('marks.*.mark').isString(),
+        body('marks.*.grade_point').custom(isJSONNumber),
+        validate,
+        async (req, res) => {
+            const result = await model.Scale.update(req.params.id, req.body);
+            res.sendStatus(result ? 204 : 500);
+        }
+    );
+app.route('/courses/:id/weights')
+    .get(
+        param('id').isInt().toInt(),
+        validate,
+        async (req, res) => {
+            const weights = await model.Weight.findManyByCourseId(req.params.id);
+            res.setRole(ROLE_ADMIN).sendWithRole(weights);
+        }
+    )
+    .post(
+        param('id').isInt().toInt(),
+        body('name').isString(),
+        body('weight').custom(isJSONNumber),
+        body('expected_max_score').custom(isJSONNumber),
+        body('drop_n').custom(isJSONInteger),
+        validate,
+        async (req, res) => {
+            const weightId = await model.Weight.create(req.params.id, req.body);
+            if (weightId == undefined) {
+                res.sendStatus(500);
+            } else {
+                res.status(201).set('Location', `/weights/${id}`).json({id:weightId});
+            }
+        }
+    );
+app.route('/enrollments/:id')
+    .get(
+        param('id').isInt().toInt(),
+        validate,
+        async (req, res) => {
+            const enrollment = await model.Enrollment.findById(req.params.id);
+            if (enrollment == undefined) {
+                res.sendStatus(404);
+            } else {
+                res.setRole(ROLE_ADMIN).sendWithRole(enrollment);
+            }
+        }
+    )
+    .put(
+        param('id').isInt().toInt(),
+        body('name').isString(),
+        body('email').isEmail(),
+        body('metadata').optional().isString(),
+        validate,
+        async (req, res) => {
+            const result = await model.Enrollment.update(req.params.id, req.body);
+            res.sendStatus(result ? 204 : 500);
+        }
+    )
+    .delete(
+        param('id').isInt().toInt(),
+        validate,
+        async (req, res) => {
+            const result = await model.Enrollment.delete(req.params.id);
+            res.sendStatus(result ? 204 : 500);
+        }
+    );
+app.route('/enrollments/:id/getLink')
+    .post(
+        async (req, res) => {
+            res.sendStatus(404);
+        }
+    );
+app.route('/weights/:id')
+    .get(
+        param('id').isInt().toInt(),
+        validate,
+        async (req, res) => {
+            const weight = await model.Weight.findById(req.params.id);
+            if (weight == undefined) {
+                res.sendStatus(404);
+            } else {
+                res.setRole(ROLE_ADMIN).sendWithRole(weight);
+            }
+        }
+    )
+    .put(
+        param('id').isInt().toInt(),
+        body('name').isString(),
+        body('weight').custom(isJSONNumber),
+        body('expected_max_score').custom(isJSONNumber),
+        body('drop_n').custom(isJSONInteger),
+        validate,
+        async (req, res) => {
+            const result = await model.Weight.update(req.params.id, req.body);
+            res.sendStatus(result ? 204 : 500);
+        }
+    )
+    .delete(
+        param('id').isInt().toInt(),
+        validate,
+        async (req, res) => {
+            const result = await model.Weight.delete(req.params.id);
+            res.sendStatus(result ? 204 : 500);
+        }
+    );
+app.route('/weights/:id/weightEvaluations')
+    .get(
+        param('id').isInt().toInt(),
+        validate,
+        async (req, res) => {
+            const evaluatedWeights = await model.EvaluatedWeight.findManyByWeightId(req.params.id);
+            res.setRole(ROLE_ADMIN).sendWithRole(evaluatedWeights);
+        }
+    );
+app.route('/weights/:id/weightEvaluations/:enrollee')
+    .get(
+        param('id').isInt().toInt(),
+        param('enrollee').isInt().toInt(),
+        validate,
+        async (req, res) => {
+            const evaluatedWeight = await model.EvaluatedWeight.findByWeightIdAndEnrolleeId(req.params.id, req.params.enrollee);
+            if (evaluatedWeight == undefined) {
+                res.sendStatus(404);
+            } else {
+                res.setRole(ROLE_ADMIN).sendWithRole(evaluatedWeight);
+            }
+        }
+    );
+app.route('/weights/:id/assignments')
+    .get(
+        param('id').isInt().toInt(),
+        validate,
+        async (req, res) => {
+            const assignments = await model.Assignment.findByWeight(req.params.id);
+            res.setRole(ROLE_ADMIN).sendWithRole(assignments);
+        }
+    )
+    .post(
+        param('id').isInt().toInt(),
+        body('name').isString(),
+        body('max_score').custom(isJSONNumber),
+        validate,
+        async (req, res) => {
+            const assignmentId = await model.Assignment.create(req.params.id, req.body);
+            if (result == undefined) {
+                res.sendStatus(404);
+            } else {
+                res.status(201).set('Location', `/assignments/${assignmentId}`).json({id:assignmentId});
+            }
+        }
+    );
 
+app.route('/assignments/:id')
+    .get(
+        param('id').isInt().toInt(),
+        validate,
+        async (req, res) => {
+            const assignment = await model.Assignment.findById(req.params.id);
+            if (assignment == undefined) {
+                res.sendStatus(404);
+            } else {
+                res.setRole(ROLE_ADMIN).sendWithRole(assignment);
+            }
+        }
+    )
+    .put(
+        param('id').isInt().toInt(),
+        body('name').isString(),
+        body('max_score').custom(isJSONNumber),
+        validate,
+        async (req, res) => {
+            const result = await model.Assignment.update(req.params.id);
+            res.sendStatus(result ? 204 : 500);
+        }
+    )
+    .delete(
+        param('id').isInt().toInt(),
+        validate,
+        async (req, res) => {
+            const result = await model.Assignment.delete(req.params.id);
+            res.sendStatus(result ? 204 : 500);
+        }
+    );
+app.route('/assignments/:id/evaluations')
+    .get(
+        param('id').isInt().toInt(),
+        validate,
+        async (req, res) => {
+            const evaluations = await model.Evaluation.findManyByAssignmentId(req.params.id);
+            res.setRole(ROLE_ADMIN).sendWithRole(evaluations);
+        }
+    );
+app.route('/assignments/:id/evaluations/:enrollee')
+    .get(
+        param('id').isInt().toInt(),
+        param('enrollee').isInt().toInt(),
+        validate,
+        async (req, res) => {
+            const evaluation = await model.Evaluation.findByAssignmentIdAndEnrolleeId(req.params.id, req.params.enrollee);
+            if (evaluation == undefined) {
+                res.sendStatus(404);
+            } else {
+                res.setRole(ROLE_ADMIN).sendWithRole(evaluation);
+            }
+        }
+    )
+    .put(
+        param('id').isInt().toInt(),
+        param('enrollee').isInt().toInt(),
+        body('score').custom(isJSONNumber),
+        body('evaluated').custom(isJSONNumber),
+        validate,
+        async (req, res) => {
+            const result = await model.Evaluation.put(req.params.id, req.params.enrollee, req.body);
+            res.sendStatus(result ? 204 : 500);
+        }
+    )
+    .delete(
+        param('id').isInt().toInt(),
+        param('enrollee').isInt().toInt(),
+        validate,
+        async (req, res) => {
+            const result = await model.Evaluation.delete(req.params.id, req.params.enrollee);
+            res.sendStatus(result ? 204 : 500);
+        }
+    );
