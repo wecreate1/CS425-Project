@@ -190,9 +190,10 @@ export class Scale {
             }
             await client.query(pg_format('INSERT INTO ScaleMarks (course, score, mark, grade_point) VALUES %L;', marks_list));
             await client.query('COMMIT');
+            return true;
         } catch (e) {
             await db.query('ROLLBACK');
-            throw e;
+            return false;
         } finally {
             client.release();
         }
@@ -223,26 +224,51 @@ export class Scale {
 
 export class Enrollment {
     constructor(obj) {
-        ({id: this.id, course: this.course, student: this.student, name: this.name, email: this.email, metadata: this.metadata} = obj);
+        ({id: this.id, course: this.course, student: this.student, name: this.name, email: this.email, metadata: this.metadata} = obj)
+        if (obj.course_id != undefined) {
+            this.course = new Course({id:obj.course_id, name:obj.course_name, credits:obj.course_credits});
+        };
     }
 
     get isLinked() {
         return this.student != null;
     }
 
-    static async findById(id) {
-        const result = await db.query(sql`
-            SELECT Enrollments.id, Enrollments.course, Enrollments.student, Enrollments.name, Enrollments.email, Enrollments.metadata
-            FROM Enrollments
-            WHERE id=${id};
-        `);
+    static async findById(id, withCourse=false) {
+        let result;
+        if (withCourse) {
+            result = await db.query(sql`
+                SELECT Enrollments.id,
+                       Enrollments.course,
+                       Enrollments.Student,
+                       Enrollments.name,
+                       Enrollments.email,
+                       Enrollments.metadata,
+                       Courses.id AS course_id,
+                       Courses.name AS course_name,
+                       Courses.credits AS course_credits
+                FROM Enrollments INNER JOIN Courses ON Enrollments.course=Courses.id
+                WHERE Enrollments.id=${id};
+            `);
+        } else {
+            result = await db.query(sql`
+                SELECT Enrollments.id,
+                    Enrollments.course,
+                    Enrollments.Student,
+                    Enrollments.name,
+                    Enrollments.email,
+                    Enrollments.metadata
+                FROM Enrollments
+                WHERE id=${id};
+            `);
+        }
 
         if (result.rows.length == 1) {
-            return new Course(result.rows[0]);
+            return new Enrollment(result.rows[0]);
         }
     }
 
-    static async findManyByStudentId(studentId) {
+    static async findManyByStudentId(studentId, withCourse=false) {
         const result = await db.query(sql`
             SELECT Enrollments.id, Enrollments.course, Enrollments.student, Enrollments.name, Enrollments.email, Enrollments.metadata
             FROM Enrollments
@@ -268,7 +294,7 @@ export class Enrollment {
             FROM Enrollments;
         `);
 
-        return result.rows.map((obj) => new Course(obj));
+        return result.rows.map((obj) => new Enrollment(obj));
     }
 
     static async create(courseId, obj) {
@@ -323,21 +349,21 @@ export class Enrollment {
     }
 
     forStudent() {
-        return {id: this.id, course: this.course, student: this.student, name: this.name};
+        return {id: this.id, course: typeof this.course == 'number' ? this.course : this.course.forStudent(), student: this.student, name: this.name};
     }
 
     forInstructor() {
-        return {id: this.id, course: this.course, isLinked: this.isLinked, name: this.name, email: this.email, metadata: this.metadata};
+        return {id: this.id, course: typeof this.course == 'number' ? this.course : this.course.forInstructor(), isLinked: this.isLinked, name: this.name, email: this.email, metadata: this.metadata};
     }
 
     forAdmin() {
-        return {id: this.id, course: this.course, student: this.student, isLinked: this.isLinked, name: this.name, email: this.email, metadata: this.metadata};
+        return {id: this.id, course: typeof this.course == 'number' ? this.course : this.course.forAdmin(), student: this.student, isLinked: this.isLinked, name: this.name, email: this.email, metadata: this.metadata};
     }
 }
 
 export class Instructs {
     constructor(obj) {
-        ({coure: this.course, instructor: this.instructor} = obj);
+        ({course: this.course, instructor: this.instructor} = obj);
     }
 
     static async findManyByCourseId(courseId) { // just in case we end up supporting multiple instructors per course
@@ -389,7 +415,7 @@ export class Instructs {
 
 export class Weight {
     constructor(obj) {
-        ({id: this.id, course: this.coure, name: this.name, weight: this.weight, expected_max_score: this.expected_max_score, drop_n: this.drop_n, current_max_score: this.current_max_score} = obj);
+        ({id: this.id, course: this.course, name: this.name, weight: this.weight, expected_max_score: this.expected_max_score, drop_n: this.drop_n, current_max_score: this.current_max_score} = obj);
     }
 
     static async findById(id) {
@@ -607,7 +633,7 @@ export class Evaluation {
         const result = await db.query(/* non-portable */ sql`
             INSERT INTO Evaluations (assignment, enrollee, score, evaluated)
             VALUES (${assignmentId}, ${enrolleeId}, ${obj.score}, ${obj.evaluated})
-            ON CONFLICT DO UPDATE
+            ON CONFLICT (assignment, enrollee) DO UPDATE
                 SET score=EXCLUDED.score, evaluated=EXCLUDED.evaluated;
         `);
 
@@ -761,5 +787,61 @@ export class EvaluatedCourse {
 
     forAdmin() {
         return {enrollee: this.enrollee, course: this.course, current_weighted_score: this.current_weighted_score, current_evaluated: this.current_evaluated, expected_weighted_score: this.expected_weighted_score, expected_evaluated: this.expected_evaluated};
+    }
+}
+
+export class EnrollmentUserLinkToken {
+    static async create(enrollmentId) {
+        const result = await db.query(sql`
+            INSERT INTO EnrollmentUserLinkTokens (enrollment)
+            VALUES (${enrollmentId})
+            ON CONFLICT (enrollment) DO UPDATE
+                SET token=EXCLUDED.token, timestamp=EXCLUDED.timestamp
+            RETURNING token;
+        `);
+
+        if (result.rows.length == 1) {
+            return {token: result.rows[0].token, expires: new Date(result.rows[0].timestamp.getTime() + 7*24*60*60*1000)};
+        }
+    }
+
+    static async perform(token, studentId) {
+        const client = db.getClient();
+        let enrollment;
+        let result;
+        try {
+            await client.query('BEGIN');
+            enrollment = await client.query(sql`
+                DELETE FROM EnrollmentUserLinkTokens
+                WHERE token=${token} AND timestamp<${new Date(new Date().getTime() + 7*24*60*60*1000)}
+                RETURNING enrollment;
+            `);
+
+            if (enrollment.rows.length != 1) {
+                throw null;
+            }
+
+            result = await client.query(sql`
+                UPDATE Enrollments
+                SET student=${studentId}
+                WHERE id=${enrollment.rows[0].enrollment};
+            `);
+
+            await client.query('COMMIT');
+
+        } catch (e) {
+            await client.query('ROLLBACK');
+            return
+        } finally {
+            client.release();
+        }
+
+        if (result.rowCount != 1) {
+            throw null;
+        }
+
+        return enrollment.rows[0].enrollment;
+        // const result = await db.query(sql`
+        //     UPDATE`)
     }
 }

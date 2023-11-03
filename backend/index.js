@@ -3,6 +3,7 @@ import { sql } from './db';
 import * as model from './model';
 import express from 'express';
 import { query, param, validationResult, body } from 'express-validator';
+import { randomUUID } from 'node:crypto';
 
 function validate(req, res, next) {
     if (!validationResult(req).isEmpty()) {
@@ -122,14 +123,22 @@ app.route('/users/:id/enrollments')
         validate,
         async (req, res) => {
             // should return both enrollment and course info
-            const courses = await model.Course.findManyByStudentId(req.params.id);
+            const courses = await model.Enrollment.findManyByStudentId(req.params.id, true);
             res.setRole(ROLE_STUDENT).sendWithRole(courses);
         }
     );
 app.route('/users/:id/enrollments/link')
     .get(
+        param('id').isInt().toInt(),
+        body('token').isUUID(),
+        validate,
         async (req, res) => {
-            res.sendStatus(404);
+            const enrollment = model.EnrollmentUserLinkToken.perform(req.body.token, req.params.id);
+            if (enrollment == undefined) {
+                res.sendStatus(500);
+            } else {
+                res.status(201).set('Location', `/enrollments/${enrollment}`);
+            }
         }
     );
 app.route('/users/:id/instructs')
@@ -282,7 +291,7 @@ app.route('/enrollments/:id')
         param('id').isInt().toInt(),
         validate,
         async (req, res) => {
-            const enrollment = await model.Enrollment.findById(req.params.id);
+            const enrollment = await model.Enrollment.findById(req.params.id, true);
             if (enrollment == undefined) {
                 res.sendStatus(404);
             } else {
@@ -309,10 +318,13 @@ app.route('/enrollments/:id')
             res.sendStatus(result ? 204 : 500);
         }
     );
-app.route('/enrollments/:id/getLink')
+app.route('/enrollments/:id/getLinkToken')
     .post(
+        param('id').isInt().toInt(),
+        validate,
         async (req, res) => {
-            res.sendStatus(404);
+            const token = await model.EnrollmentUserLinkToken.create(req.params.id);
+            res.json(token);
         }
     );
 app.route('/weights/:id')
