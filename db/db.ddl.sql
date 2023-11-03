@@ -8,7 +8,7 @@ CREATE TABLE OIDCSubject (
     sub VARCHAR UNIQUE,
     user INT,
     PRIMARY KEY (sub),
-    FOREIGN KEY (user) REFERENCES Users ON DELETE CASCADE (id)
+    FOREIGN KEY (user) REFERENCES Users (id) ON DELETE CASCADE
 );
 
 -- CREATE TABLE Scale (
@@ -34,7 +34,7 @@ CREATE TABLE ScaleMarks (
     grade_point REAL NOT NULL,
     PRIMARY KEY (course, score)
     -- PRIMARY KEY (scale, score)
-    FOREIGN KEY (course) REFERENCES Courses ON DELETE CASCADE (id)
+    FOREIGN KEY (course) REFERENCES Courses (id) ON DELETE CASCADE
     -- FOREIGN KEY (scale) REFERENCES Scale(id)
 );
 
@@ -46,16 +46,16 @@ CREATE TABLE Enrollments (
     email VARCHAR NULL;
     metadata VARCHAR,
     PRIMARY KEY (id),
-    FOREIGN KEY (course) REFERENCES Courses ON DELETE CASCADE (id),
-    FOREIGN KEY (student) REFERENCES Users ON DELETE SET NULL (id)
+    FOREIGN KEY (course) REFERENCES Courses (id) ON DELETE CASCADE,
+    FOREIGN KEY (student) REFERENCES Users (id) ON DELETE SET NULL
 );
 
 CREATE TABLE Instructs (
     course INT NOT NULL,
     instructor INT NOT NULL,
     PRIMARY KEY (course, instrucor),
-    FOREIGN KEY (course) REFERENCES Courses ON DELETE CASCADE (id),
-    FOREIGN KEY (instrucor) REFERENCES Users ON DELETE CASCADE (id)
+    FOREIGN KEY (course) REFERENCES Courses (id) ON DELETE CASCADE,
+    FOREIGN KEY (instrucor) REFERENCES Users (id) ON DELETE CASCADE
 );
 
 CREATE TABLE Weights (
@@ -66,7 +66,7 @@ CREATE TABLE Weights (
     expected_max_score REAL NULL,
     drop_n INT NOT NULL,
     PRIMARY KEY (id),
-    FOREIGN KEY (course) REFERENCES Courses ON DELETE CASCADE (id)
+    FOREIGN KEY (course) REFERENCES Courses (id) ON DELETE CASCADE
 );
 
 CREATE TABLE Assignments (
@@ -75,7 +75,7 @@ CREATE TABLE Assignments (
     name VARCHAR NOT NULL,
     max_score REAL,
     PRIMARY KEY (id),
-    FOREIGN KEY (weight) REFERENCES Weights ON DELETE CASCADE (id)
+    FOREIGN KEY (weight) REFERENCES Weights (id) ON DELETE CASCADE
 );
 
 CREATE TABLE Evaluations (
@@ -84,9 +84,16 @@ CREATE TABLE Evaluations (
     score REAL NOT NULL,
     evaluated REAL NOT NULL,
     PRIMARY KEY (assignment, enrollee),
-    FOREIGN KEY (assignment) REFERENCES Assignments ON DELETE CASCADE (id),
-    FOREIGN KEY (enrollee) REFERENCES Enrollments ON DELETE CASCADE (id)
+    FOREIGN KEY (assignment) REFERENCES Assignments (id) ON DELETE CASCADE,
+    FOREIGN KEY (enrollee) REFERENCES Enrollments (id) ON DELETE CASCADE
 );
+
+CREATE TABLE EnrollmentUserLinkTokens (
+    token UUID NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+    enrollment UNIQUE INT NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (enrollment) REFERENCES Enrollments (id) ON DELETE CASCADE
+)
 
 CREATE VIEW WeightsCalculated AS
 SELECT Weights.id AS id, SUM(Assignmets.max_score) AS current_max_score
