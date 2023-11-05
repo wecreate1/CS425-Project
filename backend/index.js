@@ -28,25 +28,25 @@ function sendWithRole(res, role, val) {
         res.sendStatus(400);
     } else if (Array.isArray(val)) {
         if (role == ROLE_ADMIN) {
-            res.sendJson(val.map(obj => obj.forAdmin()));
+            res.json(val.map(obj => obj.forAdmin()));
         } else if (role == ROLE_USER) {
-            res.sendJson(val.map(obj => obj.forUser()));
+            res.json(val.map(obj => obj.forUser()));
         } else if (role == ROLE_STUDENT) {
-            res.sendJson(val.map(obj => obj.forStudent()));
+            res.json(val.map(obj => obj.forStudent()));
         } else if (role == ROLE_INSTRUCTOR) {
-            res.sendJson(val.map(obj => obj.forInstructor()));
+            res.json(val.map(obj => obj.forInstructor()));
         }
     } else if (val == undefined) {
         res.sendStatus(404);
     } else {
         if (role == ROLE_ADMIN) {
-            res.sendJson(val.forAdmin());
+            res.json(val.forAdmin());
         } else if (role == ROLE_USER) {
-            res.sendJson(val.forUser());
+            res.json(val.forUser());
         } else if (role == ROLE_STUDENT) {
-            res.sendJson(val.forStudent());
+            res.json(val.forStudent());
         } else if (role == ROLE_INSTRUCTOR) {
-            res.sendJson(val.forInstructor());
+            res.json(val.forInstructor());
         }
     }
 }
@@ -160,7 +160,7 @@ app.route('/api/v1/users/:id/instructs')
         validate,
         async (req, res) => {
             const courseId = await model.Course.create(req.body);
-            if (course == undefined) {
+            if (courseId == undefined) {
                 res.sendStatus(500);
                 return;
             }
@@ -170,7 +170,7 @@ app.route('/api/v1/users/:id/instructs')
                 res.sendStatus(500);
                 return
             }
-            res.status(201).set('Location', `/api/v1/courses/${id}`).json({id:courseId});
+            res.status(201).set('Location', `/api/v1/courses/${courseId}`).json({id:courseId});
         }
     );
 app.route('/api/v1/courses/:id')

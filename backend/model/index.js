@@ -33,10 +33,10 @@ export class User {
             INSERT INTO Users (name)
             VALUES (${obj.name})
             RETURNING id;
-        `)
+        `);
 
         if (result.rows.length  == 1) {
-            return result.rows.length[0].id;
+            return result.rows[0].id;
         }
     }
 
@@ -93,8 +93,8 @@ export class Course {
     static async findManyByStudentId(studentId) {
         const result = await db.query(sql`
             SELECT Courses.id, Courses.name, Courses.credits
-            FROM Courses INNER JOIN Enrollments ON Courses.id=Enrollments.course
-            WHERE student=${studentId};
+            FROM Courses INNER JOIN Enrollments ON Courses.id=Enrollments.course_id
+            WHERE student_id=${studentId};
         `);
     
         return result.rows.map((obj) => new Course(obj));
@@ -103,8 +103,8 @@ export class Course {
     static async findManyByInstructorId(instructorId) {
         const result = await db.query(sql`
             SELECT Courses.id, Courses.name, Courses.credits
-            FROM Courses INNER JOIN Instructs ON Courses.id=Instructs.course
-            WHERE instructor=${instructorId};
+            FROM Courses INNER JOIN Instructs ON Courses.id=Instructs.course_id
+            WHERE instructor_id=${instructorId};
         `);
     
         return result.rows.map((obj) => new Course(obj));
@@ -118,7 +118,7 @@ export class Course {
         `)
 
         if (result.rows.length  == 1) {
-            return result.rows.length[0].id;
+            return result.rows[0].id;
         }
     }
 
@@ -304,7 +304,7 @@ export class Enrollment {
         `)
 
         if (result.rows.length  == 1) {
-            return result.rows.length[0].id;
+            return result.rows[0].id;
         }
     }
 
@@ -425,7 +425,7 @@ export class Weight {
         `);
 
         if (result.rows.length == 1) {
-            return new Weight(result.rows.length[0]);
+            return new Weight(result.rows[0]);
         }
     }
 
@@ -456,7 +456,7 @@ export class Weight {
         `);
 
         if (result.rows.length == 1) {
-            return result.rows.length[0].id;
+            return result.rows[0].id;
         }
     }
 

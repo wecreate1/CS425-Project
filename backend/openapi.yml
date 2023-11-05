@@ -7,6 +7,15 @@ paths:
     post:
       tags:
         - users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
       responses:
         '201':
           description: |-
@@ -200,25 +209,27 @@ paths:
             schema:
               type: object
               properties:
-                id:
-                  type: integer
                 name:
                   type: string
                 credits:
                   type: number
       responses:
-        '200':
+        '201':
           description: |-
-            200 Respose
+            201 Respose
+          headers:
+            location:
+              description: /api/v1/courses/:id
+              schema:
+                type: string
+                format: uri
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  name:
-                    type: string
-                  credits:
-                    type: number
+                  id:
+                    type: integer
         '500':
           description: |-
             500 Response

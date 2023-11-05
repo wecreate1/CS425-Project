@@ -6,7 +6,7 @@ const { Pool } = pg;
 
 const pool = new pg.Pool();
 
-export const query = (text, param, callback) => {
+export const query = (text, params, callback) => {
     return pool.query(text, params, callback);
 }
 
@@ -15,5 +15,5 @@ export const getClient = () => {
 }
 
 export const sql = (...params) => {
-    return dedent(sqlUtil(...params))
+    return sqlUtil(...params);
 }

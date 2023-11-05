@@ -127,11 +127,13 @@ CREATE OR REPLACE FUNCTION process_last_instructs_delete_deletes_course() RETURN
     BEGIN
         DELETE FROM Courses
         WHERE id=OLD.course_id AND NOT EXISTS (SELECT 1 FROM Instructs WHERE course_id=OLD.course_id);
+        
+        RETURN NULL;
     END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER last_instructs_delete_deletes_course
 AFTER DELETE ON Instructs
-FOR EACH STATEMENT
+FOR EACH ROW
 EXECUTE FUNCTION process_last_instructs_delete_deletes_course();
 
