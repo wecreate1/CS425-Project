@@ -1,5 +1,5 @@
-import * as db from './db';
-import { sql } from './db';
+import * as db from '../db/index.js';
+import { sql } from '../db/index.js';
 import * as pg_format from 'pg-format';
 
 export class User {
@@ -33,10 +33,10 @@ export class User {
             INSERT INTO Users (name)
             VALUES (${obj.name})
             RETURNING id;
-        `)
+        `);
 
         if (result.rows.length  == 1) {
-            return result.rows.length[0].id;
+            return result.rows[0].id;
         }
     }
 
@@ -93,8 +93,8 @@ export class Course {
     static async findManyByStudentId(studentId) {
         const result = await db.query(sql`
             SELECT Courses.id, Courses.name, Courses.credits
-            FROM Courses INNER JOIN Enrollments ON Courses.id=Enrollments.course
-            WHERE student=${studentId};
+            FROM Courses INNER JOIN Enrollments ON Courses.id=Enrollments.course_id
+            WHERE student_id=${studentId};
         `);
     
         return result.rows.map((obj) => new Course(obj));
@@ -103,8 +103,8 @@ export class Course {
     static async findManyByInstructorId(instructorId) {
         const result = await db.query(sql`
             SELECT Courses.id, Courses.name, Courses.credits
-            FROM Courses INNER JOIN Instructs ON Courses.id=Instructs.course
-            WHERE instructor=${instructorId};
+            FROM Courses INNER JOIN Instructs ON Courses.id=Instructs.course_id
+            WHERE instructor_id=${instructorId};
         `);
     
         return result.rows.map((obj) => new Course(obj));
@@ -118,7 +118,7 @@ export class Course {
         `)
 
         if (result.rows.length  == 1) {
-            return result.rows.length[0].id;
+            return result.rows[0].id;
         }
     }
 
@@ -180,7 +180,7 @@ export class Scale {
             await client.query('BEGIN');
             await client.query(sql`
                 DELETE FROM ScaleMarks
-                WHERE course=${id};
+                WHERE course_id=${courseId};
             `);
             let marks_list = [];
             if (obj.marks != undefined) {
@@ -188,7 +188,7 @@ export class Scale {
                     marks_list.push([courseId, obj.score, obj.mark, obj.grade_point])
                 }
             }
-            await client.query(pg_format('INSERT INTO ScaleMarks (course, score, mark, grade_point) VALUES %L;', marks_list));
+            await client.query(pg_format('INSERT INTO ScaleMarks (course_id, score, mark, grade_point) VALUES %L;', marks_list));
             await client.query('COMMIT');
             return true;
         } catch (e) {
@@ -224,14 +224,14 @@ export class Scale {
 
 export class Enrollment {
     constructor(obj) {
-        ({id: this.id, course: this.course, student: this.student, name: this.name, email: this.email, metadata: this.metadata} = obj)
-        if (obj.course_id != undefined) {
+        ({id: this.id, course_id: this.course_id, student_id: this.student_id, name: this.name, email: this.email, metadata: this.metadata} = obj)
+        if (obj.course_name != undefined) {
             this.course = new Course({id:obj.course_id, name:obj.course_name, credits:obj.course_credits});
         };
     }
 
     get isLinked() {
-        return this.student != null;
+        return this.student_id != null;
     }
 
     static async findById(id, withCourse=false) {
@@ -239,12 +239,11 @@ export class Enrollment {
         if (withCourse) {
             result = await db.query(sql`
                 SELECT Enrollments.id,
-                       Enrollments.course,
-                       Enrollments.Student,
+                       Enrollments.course_id,
+                       Enrollments.student_id,
                        Enrollments.name,
                        Enrollments.email,
                        Enrollments.metadata,
-                       Courses.id AS course_id,
                        Courses.name AS course_name,
                        Courses.credits AS course_credits
                 FROM Enrollments INNER JOIN Courses ON Enrollments.course=Courses.id
@@ -253,8 +252,8 @@ export class Enrollment {
         } else {
             result = await db.query(sql`
                 SELECT Enrollments.id,
-                    Enrollments.course,
-                    Enrollments.Student,
+                    Enrollments.course_id,
+                    Enrollments.student_id,
                     Enrollments.name,
                     Enrollments.email,
                     Enrollments.metadata
@@ -270,9 +269,9 @@ export class Enrollment {
 
     static async findManyByStudentId(studentId, withCourse=false) {
         const result = await db.query(sql`
-            SELECT Enrollments.id, Enrollments.course, Enrollments.student, Enrollments.name, Enrollments.email, Enrollments.metadata
+            SELECT Enrollments.id, Enrollments.course_id, Enrollments.student_id, Enrollments.name, Enrollments.email, Enrollments.metadata
             FROM Enrollments
-            WHERE student=${studentId};
+            WHERE student_id=${studentId};
         `);
     
         return result.rows.map((obj) => new Enrollment(obj));
@@ -280,9 +279,9 @@ export class Enrollment {
 
     static async findManyByCourseId(courseId) {
         const result = await db.query(sql`
-            SELECT Enrollments.id, Enrollments.course, Enrollments.student, Enrollments.name, Enrollments.email, Enrollments.metadata
+            SELECT Enrollments.id, Enrollments.course_id, Enrollments.student_id, Enrollments.name, Enrollments.email, Enrollments.metadata
             FROM Enrollments
-            WHERE course=${courseId};
+            WHERE course_id=${courseId};
         `);
     
         return result.rows.map((obj) => new Enrollment(obj));
@@ -290,7 +289,7 @@ export class Enrollment {
 
     static async findAll(id) {
         const result = await db.query(sql`
-            SELECT Enrollments.id, Enrollments.course, Enrollments.student, Enrollments.name, Enrollments.email, Enrollments.metadata
+            SELECT Enrollments.id, Enrollments.course_id, Enrollments.student_id, Enrollments.name, Enrollments.email, Enrollments.metadata
             FROM Enrollments;
         `);
 
@@ -299,13 +298,13 @@ export class Enrollment {
 
     static async create(courseId, obj) {
         const result = await db.query(sql`
-            INSERT INTO Enrollments (course, name, email, metadata)
+            INSERT INTO Enrollments (course_id, name, email, metadata)
             VALUES (${courseId}, ${obj.name}, ${obj.email}, ${obj.metadata})
             RETURNING id;
         `)
 
         if (result.rows.length  == 1) {
-            return result.rows.length[0].id;
+            return result.rows[0].id;
         }
     }
 
@@ -328,20 +327,20 @@ export class Enrollment {
         return result.rowCount == 1;
     }
 
-    static async linkStudent(id, studentId) {
-        const result = await db.query(sql`
-            UPDATE Enrollments
-            SET student=${studentId}
-            WHERE id=${id};
-        `);
+    // static async linkStudent(id, studentId) {
+    //     const result = await db.query(sql`
+    //         UPDATE Enrollments
+    //         SET student_id=${studentId}
+    //         WHERE id=${id};
+    //     `);
 
-        return result.rowCount == 1;
-    }
+    //     return result.rowCount == 1;
+    // }
 
     static async unlinkStudent(id) {
         const result = await db.query(sql`
             UPDATE Enrollments
-            SET student=NULL
+            SET student_id=NULL
             WHERE id=${id};
         `);
 
@@ -349,28 +348,28 @@ export class Enrollment {
     }
 
     forStudent() {
-        return {id: this.id, course: typeof this.course == 'number' ? this.course : this.course.forStudent(), student: this.student, name: this.name};
+        return {id: this.id, course_id: this.course_id, course: this.course ? this.course.forStudent() : undefined, student_id: this.student_id, name: this.name};
     }
 
     forInstructor() {
-        return {id: this.id, course: typeof this.course == 'number' ? this.course : this.course.forInstructor(), isLinked: this.isLinked, name: this.name, email: this.email, metadata: this.metadata};
+        return {id: this.id, course_id: this.course_id, course: this.course ? this.course.forInstructor() : undefined, isLinked: this.isLinked, name: this.name, email: this.email, metadata: this.metadata};
     }
 
     forAdmin() {
-        return {id: this.id, course: typeof this.course == 'number' ? this.course : this.course.forAdmin(), student: this.student, isLinked: this.isLinked, name: this.name, email: this.email, metadata: this.metadata};
+        return {id: this.id, course_id: this.course_id, course: this.course ? this.course.forAdmin() : undefined, student_id: this.student_id, isLinked: this.isLinked, name: this.name, email: this.email, metadata: this.metadata};
     }
 }
 
 export class Instructs {
     constructor(obj) {
-        ({course: this.course, instructor: this.instructor} = obj);
+        ({course_id: this.course_id, instructor_id: this.instructor_id} = obj);
     }
 
     static async findManyByCourseId(courseId) { // just in case we end up supporting multiple instructors per course
         const result = await db.query(sql`
-            SELECT course, instructor
+            SELECT course_id, instructor_id
             FROM Instructs
-            WHERE course=${courseId};
+            WHERE course_id=${courseId};
         `);
 
         return result.rows.map(obj => new Instructs(obj));
@@ -378,9 +377,9 @@ export class Instructs {
 
     static async findManyByInstructorId(instructorId) {
         const result = await db.query(sql`
-            SELECT course, instructor
+            SELECT course_id, instructor_id
             FROM Instructs
-            WHERE instructor=${instructorId};
+            WHERE instructor_id=${instructorId};
         `);
 
         return result.rows.map(obj => new Instructs(obj));
@@ -388,7 +387,7 @@ export class Instructs {
 
     static async create(courseId, instructorId) {
         const result = await db.query(sql`
-            INSERT INTO Instructs (course, instructor)
+            INSERT INTO Instructs (course_id, instructor_id)
             VALUES (${courseId}, ${instructorId});
         `)
 
@@ -398,41 +397,41 @@ export class Instructs {
     static async delete(courseId, instructorId) {
         const result = await db.query(sql`
             DELETE FROM Instructs
-            WHERE course=${courseId}, instructor=${instructorId};
+            WHERE course_id=${courseId}, instructor_id=${instructorId};
         `);
 
         return result.rowCount == 1;
     }
 
     forInstructor() {
-        return {course: this.course, instructor: this.instructor};
+        return {course_id: this.course_id, instructor_id: this.instructor_id};
     }
 
     forAdmin() {
-        return {course: this.course, instructor: this.instructor};
+        return {course_id: this.course_id, instructor_id: this.instructor_id};
     }
 }
 
 export class Weight {
     constructor(obj) {
-        ({id: this.id, course: this.course, name: this.name, weight: this.weight, expected_max_score: this.expected_max_score, drop_n: this.drop_n, current_max_score: this.current_max_score} = obj);
+        ({id: this.id, course_id: this.course_id, name: this.name, weight: this.weight, expected_max_score: this.expected_max_score, drop_n: this.drop_n, current_max_score: this.current_max_score} = obj);
     }
 
     static async findById(id) {
         const result = await db.query(sql`
-            SELECT id, course, name, weight, expected_max_score, drop_n, current_max_score
+            SELECT id, course_id, name, weight, expected_max_score, drop_n, current_max_score
             FROM WeightsExtended
             WHERE id=${id};
         `);
 
         if (result.rows.length == 1) {
-            return new Weight(result.rows.length[0]);
+            return new Weight(result.rows[0]);
         }
     }
 
     static async findManyByCourseId(courseId) {
         const result = await db.query(sql`
-            SELECT id, course, name, weight, expected_max_score, drop_n, current_max_score
+            SELECT id, course_id, name, weight, expected_max_score, drop_n, current_max_score
             FROM WeightsExtended
             WHERE course=${courseId};
         `);
@@ -442,7 +441,7 @@ export class Weight {
 
     static async findAll() {
         const result = await db.query(sql`
-            SELECT id, course, name, weight, expected_max_score, drop_n, current_max_score
+            SELECT id, course_id, name, weight, expected_max_score, drop_n, current_max_score
             FROM WeightsExtended;
         `);
 
@@ -451,13 +450,13 @@ export class Weight {
 
     static async create(courseId, obj) {
         const result = await db.query(sql`
-            INSERT INTO Weights (course, name, weight, expected_max_score, drop_n)
+            INSERT INTO Weights (course_id, name, weight, expected_max_score, drop_n)
             VALUES (${courseId}, ${obj.name}, ${obj.weight}, ${obj.expected_max_score}, ${obj.drop_n})
             RETURNING id;
         `);
 
         if (result.rows.length == 1) {
-            return result.rows.length[0].id;
+            return result.rows[0].id;
         }
     }
 
@@ -481,26 +480,26 @@ export class Weight {
     }
 
     forStudent() {
-        return {id: this.id, course: this.id, name: this.name, weight: this.weight, expected_max_score: this.expected_max_score, drop_n: this.drop_n, current_max_score: this.current_max_score};
+        return {id: this.id, course_id: this.id, name: this.name, weight: this.weight, expected_max_score: this.expected_max_score, drop_n: this.drop_n, current_max_score: this.current_max_score};
     }
 
     forInstructor() {
-        return {id: this.id, course: this.id, name: this.name, weight: this.weight, expected_max_score: this.expected_max_score, drop_n: this.drop_n, current_max_score: this.current_max_score};
+        return {id: this.id, course_id: this.id, name: this.name, weight: this.weight, expected_max_score: this.expected_max_score, drop_n: this.drop_n, current_max_score: this.current_max_score};
     }
 
     forAdmin() {
-        return {id: this.id, course: this.id, name: this.name, weight: this.weight, expected_max_score: this.expected_max_score, drop_n: this.drop_n, current_max_score: this.current_max_score};
+        return {id: this.id, course_id: this.id, name: this.name, weight: this.weight, expected_max_score: this.expected_max_score, drop_n: this.drop_n, current_max_score: this.current_max_score};
     }
 }
 
 export class Assignment {
     constructor(obj) {
-        ({id: this.id, weight: this.weight, name: this.name, max_score: this.max_score} = obj);
+        ({id: this.id, weight_id: this.weight_id, name: this.name, max_score: this.max_score} = obj);
     }
 
     static async findById(id) {
         const result = await db.query(sql`
-            SELECT id, weight, name, max_score
+            SELECT id, weight_id, name, max_score
             FROM Assignments
             WHERE id = ${id};
         `);
@@ -512,9 +511,9 @@ export class Assignment {
 
     static async findByWeight(weightId) {
         const result = await db.query(sql`
-            SELECT id, weight, name, max_score
+            SELECT id, weight_id, name, max_score
             FROM Assignments
-            WHERE weight = ${weightId};
+            WHERE weight_id = ${weightId};
         `);
 
         return result.rows.map(obj => new Assignment(obj));
@@ -522,8 +521,8 @@ export class Assignment {
 
     static async findByCourse(courseId) {
         const result = await db.query(sql`
-            SELECT Assignments.id, Assignments.weight, Assignments.name, Assignments.max_score
-            FROM Assignments INNER JOIN Weights ON Assignments.weight = Weights.id
+            SELECT Assignments.id, Assignments.weight_id, Assignments.name, Assignments.max_score
+            FROM Assignments INNER JOIN Weights ON Assignments.weight_id = Weights.id
             WHERE course = ${courseId};
         `);
 
@@ -532,7 +531,7 @@ export class Assignment {
 
     static async findAll() {
         const result = await db.query(sql`
-            SELECT id, weight, name, max_score
+            SELECT id, weight_id, name, max_score
             FROM Assignments;
         `);
 
@@ -541,7 +540,7 @@ export class Assignment {
 
     static async create(weightId, obj) {
         const result = await db.query(sql`
-            INSERT INTO Assignments (weight, name, max_score)
+            INSERT INTO Assignments (weight_id, name, max_score)
             VALUES (${weightId}, ${obj.name}, ${obj.max_score})
             RETURNING id;
         `);
@@ -571,28 +570,28 @@ export class Assignment {
     }
 
     forStudent() {
-        return {id: this.id, weight: this.weight, name: this.name, max_score: this.max_score};
+        return {id: this.id, weight_id: this.weight_id, name: this.name, max_score: this.max_score};
     }
 
     forInstructor() {
-        return {id: this.id, weight: this.weight, name: this.name, max_score: this.max_score};
+        return {id: this.id, weight_id: this.weight_id, name: this.name, max_score: this.max_score};
     }
 
     forAdmin() {
-        return {id: this.id, weight: this.weight, name: this.name, max_score: this.max_score};
+        return {id: this.id, weight_id: this.weight_id, name: this.name, max_score: this.max_score};
     }
 }
 
 export class Evaluation {
     constructor(obj) {
-        ({assignment: this.assignment, enrollee: this.enrollee, score: this.score, evaluated: this.evaluated} = obj);
+        ({assignment_id: this.assignment_id, enrollee_id: this.enrollee_id, score: this.score, evaluated: this.evaluated} = obj);
     }
 
     static async findByAssignmentIdAndEnrolleeId(assignmentId, enrolleeId) {
         const result = await db.query(sql`
-            SELECT assignment, enrollee, score, evaluated
+            SELECT assignment_id, enrollee_id, score, evaluated
             FROM Evaluations
-            WHERE assignment = ${assignmentId} AND enrollee = ${enrolleeId};
+            WHERE assignment_id = ${assignmentId} AND enrollee_id = ${enrolleeId};
         `);
 
         if (result.rows.length == 1) {
@@ -602,7 +601,7 @@ export class Evaluation {
 
     static async findAll() {
         const result = await db.query(sql`
-            SELECT assignment, enrollee, score, evaluated
+            SELECT assignment_id, enrollee_id, score, evaluated
             FROM Evaluations;
         `);
 
@@ -611,9 +610,9 @@ export class Evaluation {
 
     static async findManyByAssignmentId(assignmentId) {
         const result = await db.query(sql`
-            SELECT assignment, enrollee, score, evaluated
+            SELECT assignment_id, enrollee_id, score, evaluated
             FROM Evaluations
-            WHERE assignment = ${assignmentId};
+            WHERE assignment_id = ${assignmentId};
         `);
 
         return result.rows.map(obj => new Evaluation(obj));
@@ -621,9 +620,9 @@ export class Evaluation {
 
     static async findManyByEnrolleeId(enrolleeId) {
         const result = await db.query(sql`
-            SELECT assignment, enrollee, score, evaluated
+            SELECT assignment_id, enrollee_id, score, evaluated
             FROM Evaluations
-            WHERE enrollee = ${enrolleeId};
+            WHERE enrollee_id = ${enrolleeId};
         `);
 
         return result.rows.map(obj => new Evaluation(obj));
@@ -631,9 +630,9 @@ export class Evaluation {
 
     static async put(assignmentId, enrolleeId, obj) {
         const result = await db.query(/* non-portable */ sql`
-            INSERT INTO Evaluations (assignment, enrollee, score, evaluated)
+            INSERT INTO Evaluations (assignment_id, enrollee_id, score, evaluated)
             VALUES (${assignmentId}, ${enrolleeId}, ${obj.score}, ${obj.evaluated})
-            ON CONFLICT (assignment, enrollee) DO UPDATE
+            ON CONFLICT (assignment_id, enrollee_id) DO UPDATE
                 SET score=EXCLUDED.score, evaluated=EXCLUDED.evaluated;
         `);
 
@@ -644,7 +643,7 @@ export class Evaluation {
     //     const result = await db.query(sql`
     //         UPDATE Evaluations
     //         SET score=${obj.score}, evaluated=${obj.evaluated}
-    //         WHERE assignment=${assignmentId} AND enrollee=${enrolleeId};
+    //         WHERE assignment_id=${assignmentId} AND enrollee=${enrolleeId};
     //     `);
 
     //     return result.rowCount == 1;
@@ -653,35 +652,35 @@ export class Evaluation {
     static async delete(assignmentId, enrolleeId) {
         const result = await db.query(sql`
             DELETE FROM Evaluations
-            WHERE assignments=${assignmentId} AND enrollee=${enrolleeId};
+            WHERE assignment_id=${assignmentId} AND enrollee_id=${enrolleeId};
         `);
 
         return result.rowCount == 1;
     }
 
     forStudent() {
-        return {assignment: this.assignment, enrollee: this.enrollee, score: this.score, evaluated: this.evaluated};
+        return {assignment_id: this.assignment_id, enrollee_id: this.enrollee_id, score: this.score, evaluated: this.evaluated};
     }
 
     forInstructor() {
-        return {assignment: this.assignment, enrollee: this.enrollee, score: this.score, evaluated: this.evaluated};
+        return {assignment_id: this.assignment_id, enrollee_id: this.enrollee_id, score: this.score, evaluated: this.evaluated};
     }
 
     forAdmin() {
-        return {assignment: this.assignment, enrollee: this.enrollee, score: this.score, evaluated: this.evaluated};
+        return {assignment_id: this.assignment_id, enrollee_id: this.enrollee_id, score: this.score, evaluated: this.evaluated};
     }
 }
 
 export class EvaluatedWeight {
     constructor(obj) {
-        ({enrollee: this.enrollee, weight_id: this.weight_id, total_score: this.total_score, total_evaluated: this.total_evaluated} = obj);
+        ({enrollee_id: this.enrollee_id, weight_id: this.weight_id, total_score: this.total_score, total_evaluated: this.total_evaluated} = obj);
     }
 
     static async findByWeightIdAndEnrolleeId(weightId, enrolleeId) {
         const result = await db.query(sql`
-            SELECT enrollee, weight_id, total_score, total_evaluated
+            SELECT enrollee_id, weight_id, total_score, total_evaluated
             FROM EvaluatedWeights
-            WHERE weight_id=${weightId} AND enrollee=${enrolleeId};
+            WHERE weight_id=${weightId} AND enrollee_id=${enrolleeId};
         `);
 
         if (result.rows.length == 1) {
@@ -691,7 +690,7 @@ export class EvaluatedWeight {
 
     static async findManyByWeightId(weightId) {
         const result = await db.query(sql`
-            SELECT enrollee, weight_id, total_score, total_evaluated
+            SELECT enrollee_id, weight_id, total_score, total_evaluated
             FROM EvaluatedWeights
             WHERE weight_id=${weightId};
         `);
@@ -701,7 +700,7 @@ export class EvaluatedWeight {
 
     static async findManyByEnrolleeId(enrolleeId) {
         const result = await db.query(sql`
-            SELECT enrollee, weight_id, total_score, total_evaluated
+            SELECT enrollee_id, weight_id, total_score, total_evaluated
             FROM EvaluatedWeights
             WHERE enrollee=${enrolleeId};
         `);
@@ -711,7 +710,7 @@ export class EvaluatedWeight {
 
     static async findAll() {
         const result = await db.query(sql`
-            SELECT enrollee, weight_id, total_score, total_evaluated
+            SELECT enrollee_id, weight_id, total_score, total_evaluated
             FROM EvaluatedWeights;
         `);
 
@@ -719,28 +718,28 @@ export class EvaluatedWeight {
     }
 
     forStudent() {
-        return {enrollee: this.enrollee, weight_id: this.weight_id, total_score: this.total_score, total_evaluated: this.total_evaluated};
+        return {enrollee_id: this.enrollee_id, weight_id: this.weight_id, total_score: this.total_score, total_evaluated: this.total_evaluated};
     }
 
     forInstructor() {
-        return {enrollee: this.enrollee, weight_id: this.weight_id, total_score: this.total_score, total_evaluated: this.total_evaluated};
+        return {enrollee_id: this.enrollee_id, weight_id: this.weight_id, total_score: this.total_score, total_evaluated: this.total_evaluated};
     }
 
     forAdmin() {
-        return {enrollee: this.enrollee, weight_id: this.weight_id, total_score: this.total_score, total_evaluated: this.total_evaluated};
+        return {enrollee_id: this.enrollee_id, weight_id: this.weight_id, total_score: this.total_score, total_evaluated: this.total_evaluated};
     }
 }
 
 export class EvaluatedCourse {
     constructor(obj) {
-        ({enrollee: this.enrollee, course: this.course, current_weighted_score: this.current_weighted_score, current_evaluated: this.current_evaluated, expected_weighted_score: this.expected_weighted_score, expected_evaluated: this.expected_evaluated} = obj);
+        ({enrollee_id: this.enrollee_id, course_id: this.course_id, current_weighted_score: this.current_weighted_score, current_evaluated: this.current_evaluated, expected_weighted_score: this.expected_weighted_score, expected_evaluated: this.expected_evaluated} = obj);
     }
 
     static async findByCourseIdAndEnrolleeId(courseId, enrolleeId) {
         const result = await db.query(sql`
-            SELECT enrollee, course, current_weighted_score, current_evaluated, expected_weighted_score, expected_evaluated
+            SELECT enrollee_id, course_id, current_weighted_score, current_evaluated, expected_weighted_score, expected_evaluated
             FROM EvaluatedCourses
-            WHERE course=${courseId} AND enrollee=${enrolleeId};
+            WHERE course=${courseId} AND enrollee_id=${enrolleeId};
         `);
 
         if (result.rows.length == 1) {
@@ -750,9 +749,9 @@ export class EvaluatedCourse {
 
     static async findManyByCourseId(courseId) {
         const result = await db.query(sql`
-            SELECT enrollee, course, current_weighted_score, current_evaluated, expected_weighted_score, expected_evaluated
+            SELECT enrollee_id, course_id, current_weighted_score, current_evaluated, expected_weighted_score, expected_evaluated
             FROM EvaluatedCourses
-            WHERE course=${courseId};
+            WHERE course_id=${courseId};
         `);
 
         return result.rows.map(obj => new EvaluatedWeight(obj));
@@ -760,7 +759,7 @@ export class EvaluatedCourse {
 
     static async findManyByEnrolleeId(enrolleeId) {
         const result = await db.query(sql`
-            SELECT enrollee, course, current_weighted_score, current_evaluated, expected_weighted_score, expected_evaluated
+            SELECT enrollee_id, course_id, current_weighted_score, current_evaluated, expected_weighted_score, expected_evaluated
             FROM EvaluatedCourses
             WHERE enrollee=${enrolleeId};
         `);
@@ -770,7 +769,7 @@ export class EvaluatedCourse {
 
     static async findAll() {
         const result = await db.query(sql`
-            SELECT enrollee, course, current_weighted_score, current_evaluated, expected_weighted_score, expected_evaluated
+            SELECT enrollee_id, course_id, current_weighted_score, current_evaluated, expected_weighted_score, expected_evaluated
             FROM EvaluatedCourses;
         `);
 
@@ -778,24 +777,24 @@ export class EvaluatedCourse {
     }
 
     forStudent() {
-        return {enrollee: this.enrollee, course: this.course, current_weighted_score: this.current_weighted_score, current_evaluated: this.current_evaluated, expected_weighted_score: this.expected_weighted_score, expected_evaluated: this.expected_evaluated};
+        return {enrollee_id: this.enrollee_id, course_id: this.course_id, current_weighted_score: this.current_weighted_score, current_evaluated: this.current_evaluated, expected_weighted_score: this.expected_weighted_score, expected_evaluated: this.expected_evaluated};
     }
 
     forInstructor() {
-        return {enrollee: this.enrollee, course: this.course, current_weighted_score: this.current_weighted_score, current_evaluated: this.current_evaluated, expected_weighted_score: this.expected_weighted_score, expected_evaluated: this.expected_evaluated};
+        return {enrollee_id: this.enrollee_id, course_id: this.course_id, current_weighted_score: this.current_weighted_score, current_evaluated: this.current_evaluated, expected_weighted_score: this.expected_weighted_score, expected_evaluated: this.expected_evaluated};
     }
 
     forAdmin() {
-        return {enrollee: this.enrollee, course: this.course, current_weighted_score: this.current_weighted_score, current_evaluated: this.current_evaluated, expected_weighted_score: this.expected_weighted_score, expected_evaluated: this.expected_evaluated};
+        return {enrollee_id: this.enrollee_id, course_id: this.course_id, current_weighted_score: this.current_weighted_score, current_evaluated: this.current_evaluated, expected_weighted_score: this.expected_weighted_score, expected_evaluated: this.expected_evaluated};
     }
 }
 
 export class EnrollmentUserLinkToken {
     static async create(enrollmentId) {
         const result = await db.query(sql`
-            INSERT INTO EnrollmentUserLinkTokens (enrollment)
+            INSERT INTO EnrollmentUserLinkTokens (enrollment_id)
             VALUES (${enrollmentId})
-            ON CONFLICT (enrollment) DO UPDATE
+            ON CONFLICT (enrollment_id) DO UPDATE
                 SET token=EXCLUDED.token, timestamp=EXCLUDED.timestamp
             RETURNING token;
         `);
@@ -807,24 +806,24 @@ export class EnrollmentUserLinkToken {
 
     static async perform(token, studentId) {
         const client = db.getClient();
-        let enrollment;
+        let enrollment_id;
         let result;
         try {
             await client.query('BEGIN');
-            enrollment = await client.query(sql`
+            enrollment_id = await client.query(sql`
                 DELETE FROM EnrollmentUserLinkTokens
                 WHERE token=${token} AND timestamp<${new Date(new Date().getTime() + 7*24*60*60*1000)}
-                RETURNING enrollment;
+                RETURNING enrollment_id;
             `);
 
-            if (enrollment.rows.length != 1) {
+            if (enrollment_id.rows.length != 1) {
                 throw null;
             }
 
             result = await client.query(sql`
                 UPDATE Enrollments
-                SET student=${studentId}
-                WHERE id=${enrollment.rows[0].enrollment};
+                SET student_id=${studentId}
+                WHERE id=${enrollment.rows[0].enrollment_id};
             `);
 
             await client.query('COMMIT');
@@ -840,8 +839,15 @@ export class EnrollmentUserLinkToken {
             throw null;
         }
 
-        return enrollment.rows[0].enrollment;
+        return enrollment.rows[0].enrollment_id;
         // const result = await db.query(sql`
         //     UPDATE`)
+    }
+
+    static async cancel(enrollmentId) {
+        await db.query(sql`
+            DELETE FROM EnrollmentUserLinkTokens
+            WHERE enrollment_id=${enrollmentId};
+        `);
     }
 }

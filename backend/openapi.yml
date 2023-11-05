@@ -1,0 +1,1056 @@
+openapi: 3.0.3
+info:
+  title: OpenAPI 3.0
+  version: '1.0'
+paths:
+  /api/v1/users:
+    post:
+      tags:
+        - users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+      responses:
+        '201':
+          description: |-
+            201 Response
+          headers:
+            location:
+              description: /api/v1/users/:id
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+        '500':
+          description: |-
+            500 Response
+  /api/v1/users/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags:
+        - users
+      responses:
+        '200':
+          description: |-
+            200 Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+        '404':
+          description: |-
+            404 Response
+    put:
+      tags:
+        - users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+      responses:
+        '204':
+          description: |-
+            204 Response
+        '500':
+          description: |-
+            500 Response
+    delete:
+      tags:
+        - users
+      responses:
+        '204':
+          description: |-
+            204 Response
+        '500':
+          description: |-
+            500 Response
+  /api/v1/users/{id}/enrollments:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags:
+        - users
+        - enrollments
+        - courses
+      responses:
+        '200':
+          description: |-
+            200 Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    course_id:
+                      type: integer
+                    student_id:
+                      type: integer
+                    name:
+                      type: string
+                    course:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        name:
+                          type: string
+                        credits:
+                          type: number
+  /api/v1/users/{id}/enrollments/link:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    post:
+      tags:
+        - users
+        - enrollments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: integer
+                token:
+                 type: string
+                 format: uuid
+      responses:
+        '201':
+          description: |-
+            201 Response
+          headers:
+            location:
+              description: /api/v1/enrollments/:id
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+        '500':
+          description: |-
+            500 Response
+  /api/v1/users/{id}/instructs:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags:
+        - users
+        - courses
+      responses:
+        '200':
+          description: |-
+            200 Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  credits:
+                    type: number
+    post:
+      tags:
+        - users
+        - courses
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                credits:
+                  type: number
+      responses:
+        '201':
+          description: |-
+            201 Respose
+          headers:
+            location:
+              description: /api/v1/courses/:id
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+        '500':
+          description: |-
+            500 Response
+  /api/v1/courses/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags:
+        - courses
+      responses:
+        '200':
+          description: |-
+            200 Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  credits:
+                    type: number
+    put:
+      tags:
+        - courses
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                credits:
+                  type: number
+      responses:
+        '204':
+          description: |-
+            204 Response
+        '500':
+          description: |-
+            500 Response
+    delete:
+      tags:
+        - courses
+      responses:
+        '204':
+          description: |-
+            204 Response
+        '500':
+          description: |-
+            500 Response
+  /api/v1/courses/{id}/courseEvaluations:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags:
+        - courses
+      responses:
+        '200':
+          description: |-
+            200 Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    enrollee_id:
+                      type: integer
+                    course_id:
+                      type: integer
+                    current_weighted_score:
+                      type: number
+                    current_evaluated:
+                      type: number
+                    expected_weighted_score:
+                      type: number
+                    expected_evaluated:
+                      type: number
+  /api/v1/courses/{id}/courseEvaluations/{enrolleeId}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      - name: enrolleeId
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags:
+        - courses
+      responses:
+        '200':
+          description: |-
+            200 Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  enrollee_id:
+                    type: integer
+                  course_id:
+                    type: integer
+                  current_weighted_score:
+                    type: number
+                  current_evaluated:
+                    type: number
+                  expected_weighted_score:
+                    type: number
+                  expected_evaluated:
+                    type: number
+  /api/v1/courses/{id}/enrollments:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags:
+        - courses
+        - enrollments
+      responses:
+        '200':
+          description: |-
+            200 Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  course_id:
+                    type: integer
+                  isLinked:
+                    type: boolean
+                  name:
+                    type: string
+                  email:
+                    type: string
+                    format: email
+                  metadata:
+                    type: string
+    post:
+      tags:
+        - courses
+        - enrollments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                metadata:
+                  type: string
+      responses:
+        '201':
+          description: |-
+            201 Response
+          headers:
+            location:
+              description: /api/v1/enrollments/:id
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+        '500':
+          description: |-
+            500 Response
+  /api/v1/courses/{id}/scale:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags:
+        - courses
+      responses:
+        '200':
+          description: |-
+            200 Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  marks:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        score:
+                          type: number
+                        mark:
+                          type: string
+                        grade_point:
+                          type: number
+    put:
+      tags:
+        - courses
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                marks:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      score:
+                        type: number
+                      mark:
+                        type: string
+                      grade_point:
+                        type: number
+      responses:
+        '204':
+          description: |-
+            204 Response
+        '500':
+          description: |-
+            500 Response
+  /api/v1/courses/{id}/weights:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags:
+        - courses
+        - weights
+      responses:
+        '200':
+          description: |-
+            200 Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    course_id:
+                      type: integer
+                    name:
+                      type: string
+                    weight:
+                      type: number
+                    expected_max_score:
+                      type: number
+                    drop_n:
+                      type: integer
+                    current_max_score:
+                      type: number
+    post:
+      tags:
+        - courses
+        - weights
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                weight:
+                  type: number
+                expected_max_score:
+                  type: number
+                drop_n:
+                  type: integer
+      responses:
+        '201':
+          description: |-
+            201 Response
+          headers:
+            location:
+              description: /api/v1/weights/:id
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+        '500':
+          description: |-
+            500 Response
+  /api/v1/enrollments/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags:
+        - enrollments
+      responses:
+        '200':
+          description: |-
+            200 Response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      id:
+                        type: integer
+                      course_id:
+                        type: integer
+                      student_id:
+                        type: integer
+                      name:
+                        type: string
+                      course:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                          name:
+                            type: string
+                          credits:
+                            type: number
+                  - type: object
+                    properties:
+                      id:
+                        type: integer
+                      course_id:
+                        type: integer
+                      isLinked:
+                        type: boolean
+                      name:
+                        type: string
+                      email:
+                        type: string
+                        format: email
+                      metadata:
+                        type: string
+        '404':
+          description: |-
+            404 Response
+    put:
+      tags:
+        - enrollments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                metadata:
+                  type: string
+      responses:
+        '204':
+          description: |-
+            204 Response
+        '500':
+          description: |-
+            500 Response
+    delete:
+      tags:
+        - enrollments
+      responses:
+        '204':
+          description: |-
+            204 Response
+        '500':
+          description: |-
+            500 Response
+  /api/v1/enrollments/{id}/unlink:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    post:
+      tags:
+        - enrollments
+      responses:
+        '204':
+          description: |-
+            204 Response
+        '500':
+          description: |-
+            500 Response
+  /api/v1/enrollments/{id}/getLinkToken:
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    post:
+      tags:
+        - enrollments
+      responses:
+        '200':
+          description: |-
+            200 Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    format: uuid
+                  expires:
+                    type: string
+                    format: date-time
+  /api/v1/weights/{id}:
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    get:
+      tags:
+        - weights
+      responses:
+        '200':
+          description: |-
+            200 Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  course_id:
+                    type: integer
+                  name:
+                    type: string
+                  weight:
+                    type: number
+                  expected_max_score:
+                    type: number
+                  drop_n:
+                    type: integer
+                  current_max_score:
+                    type: number
+        '404':
+          description: |-
+            404 Response
+    put:
+      tags:
+        - weights
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                weight:
+                  type: number
+                expected_max_score:
+                  type: number
+                drop_n:
+                  type: integer
+      responses:
+        '204':
+          description: |-
+            204 Response
+        '500':
+          description: |-
+            500 Response
+    delete:
+      tags:
+        - weights
+      responses:
+        '204':
+          description: |-
+            204 Response
+        '500':
+          description: |-
+            500 Response
+  /api/v1/weights/{id}/weightEvaluations/:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags:
+        - weights
+      responses:
+        '200':
+          description: |-
+            200 Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    enrollee_id:
+                      type: integer
+                    weight_id:
+                      type: integer
+                    total_score:
+                      type: number
+                    total_evaluated:
+                      type: number
+  /api/v1/weights/{id}/weightEvaluations/{enrolleeId}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      - name: enrolleeId
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags:
+        - weights
+      responses:
+        '200':
+          description: |-
+            200 Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  enrollee_id:
+                    type: integer
+                  weight_id:
+                    type: integer
+                  total_score:
+                    type: number
+                  total_evaluated:
+                    type: number
+        '404':
+          description: |-
+            404 Response
+  /api/v1/weights/{id}/assignments:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags:
+        - weights
+        - assignments
+      responses:
+        '200':
+          description: |-
+            200 Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    weight_id:
+                      type: integer
+                    name:
+                      type: string
+                    max_score:
+                      type: number
+        '404':
+          description: |-
+            404 Response
+    post:
+      tags:
+        - weights
+        - assignments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                max_score:
+                  type: number
+      responses:
+        '201':
+          description: |-
+            201 Response
+          headers:
+            location:
+              description: /api/v1/assignments/:id
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+        '500':
+          description: |-
+            500 Response
+  /api/v1/assignments/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags:
+        - assignments
+      responses:
+        '200':
+          description: |-
+            200 Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  weight_id:
+                    type: integer
+                  name:
+                    type: string
+                  max_score:
+                    type: number
+        '404':
+          description: |-
+            404 Response
+    put:
+      tags:
+        - assignments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                max_score:
+                  type: number
+      responses:
+        '204':
+          description: |-
+            204 Response
+        '500':
+          description: |-
+            500 Response
+    delete:
+      tags:
+        - assignments
+      responses:
+        '204':
+          description: |-
+            204 Response
+        '500':
+          description: |-
+            500 Response
+  /api/v1/assignments/{id}/evaluations:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags:
+        - assignments
+        - evaluations
+      responses:
+        '200':
+          description: |-
+            200 Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    assignment_id:
+                      type: integer
+                    enrollee_id:
+                      type: integer
+                    score:
+                      type: number
+                    evaluated:
+                      type: number
+  /api/v1/assignments/{id}/evaluations/{enrolleeId}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      - name: enrolleeId
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags:
+        - evaluations
+      responses:
+        '200':
+          description: |-
+            200 Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  assignment_id:
+                    type: integer
+                  enrollee_id:
+                    type: integer
+                  score:
+                    type: number
+                  evaluated:
+                    type: number
+        '404':
+          description: |-
+            404 Response
+    put:
+      tags:
+        - evaluations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                score:
+                  type: number
+                evaluated:
+                  type: number
+      responses:
+        '204':
+          description: |-
+            204 Response
+        '500':
+          description: |-
+            500 Response
+    delete:
+      tags:
+        - evaluations
+      responses:
+        '204':
+          description: |-
+            204 Response
+        '500':
+          description: |-
+            500 Response
+                  

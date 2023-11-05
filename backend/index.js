@@ -1,9 +1,11 @@
-import * as db from './db';
-import { sql } from './db';
-import * as model from './model';
+import 'dotenv/config';
+
+import * as db from './db/index.js';
+import { sql } from './db/index.js';
+import * as model from './model/index.js';
 import express from 'express';
 import { query, param, validationResult, body } from 'express-validator';
-import { randomUUID } from 'node:crypto';
+// import { randomUUID } from 'node:crypto';
 
 function validate(req, res, next) {
     if (!validationResult(req).isEmpty()) {
@@ -26,25 +28,25 @@ function sendWithRole(res, role, val) {
         res.sendStatus(400);
     } else if (Array.isArray(val)) {
         if (role == ROLE_ADMIN) {
-            res.sendJson(val.map(obj => obj.forAdmin()));
+            res.json(val.map(obj => obj.forAdmin()));
         } else if (role == ROLE_USER) {
-            res.sendJson(val.map(obj => obj.forUser()));
+            res.json(val.map(obj => obj.forUser()));
         } else if (role == ROLE_STUDENT) {
-            res.sendJson(val.map(obj => obj.forStudent()));
+            res.json(val.map(obj => obj.forStudent()));
         } else if (role == ROLE_INSTRUCTOR) {
-            res.sendJson(val.map(obj => obj.forInstructor()));
+            res.json(val.map(obj => obj.forInstructor()));
         }
     } else if (val == undefined) {
         res.sendStatus(404);
     } else {
         if (role == ROLE_ADMIN) {
-            res.sendJson(val.forAdmin());
+            res.json(val.forAdmin());
         } else if (role == ROLE_USER) {
-            res.sendJson(val.forUser());
+            res.json(val.forUser());
         } else if (role == ROLE_STUDENT) {
-            res.sendJson(val.forStudent());
+            res.json(val.forStudent());
         } else if (role == ROLE_INSTRUCTOR) {
-            res.sendJson(val.forInstructor());
+            res.json(val.forInstructor());
         }
     }
 }
@@ -65,11 +67,12 @@ function isJSONInteger(val) {
 }
 
 const app = express();
+app.listen(3000);
 
 app.use(express.json());
 app.use(roleMw);
 
-app.route('/users')
+app.route('/api/v1/users')
     .get(
         async (req, res) => {
             res.sendStatus(403);
@@ -83,11 +86,11 @@ app.route('/users')
             if (id == undefined) {
                 res.sendStatus(500);
             } else {
-                res.status(201).set('Location', `/users/${id}`).json({id});
+                res.status(201).set('Location', `/api/v1/users/${id}`).json({id});
             }
         }
     )
-app.route('/users/:id')
+app.route('/api/v1/users/:id')
     .get(
         param('id').isInt().toInt(),
         validate,
@@ -117,18 +120,18 @@ app.route('/users/:id')
             res.sendStatus(result ? 204 : 500);
         }
     );
-app.route('/users/:id/enrollments')
+app.route('/api/v1/users/:id/enrollments')
     .get(
         param('id').isInt().toInt(),
         validate,
         async (req, res) => {
             // should return both enrollment and course info
-            const courses = await model.Enrollment.findManyByStudentId(req.params.id, true);
-            res.setRole(ROLE_STUDENT).sendWithRole(courses);
+            const enrollments = await model.Enrollment.findManyByStudentId(req.params.id, true);
+            res.setRole(ROLE_STUDENT).sendWithRole(enrollments);
         }
     );
-app.route('/users/:id/enrollments/link')
-    .get(
+app.route('/api/v1/users/:id/enrollments/link')
+    .post(
         param('id').isInt().toInt(),
         body('token').isUUID(),
         validate,
@@ -137,11 +140,11 @@ app.route('/users/:id/enrollments/link')
             if (enrollment == undefined) {
                 res.sendStatus(500);
             } else {
-                res.status(201).set('Location', `/enrollments/${enrollment}`);
+                res.status(201).set('Location', `/api/v1/enrollments/${enrollment}`).json({id:enrollment});
             }
         }
     );
-app.route('/users/:id/instructs')
+app.route('/api/v1/users/:id/instructs')
     .get(
         param('id').isInt().toInt(),
         validate,
@@ -157,7 +160,7 @@ app.route('/users/:id/instructs')
         validate,
         async (req, res) => {
             const courseId = await model.Course.create(req.body);
-            if (course == undefined) {
+            if (courseId == undefined) {
                 res.sendStatus(500);
                 return;
             }
@@ -167,10 +170,10 @@ app.route('/users/:id/instructs')
                 res.sendStatus(500);
                 return
             }
-            res.status(201).set('Location', `/courses/${id}`).json({id:courseId});
+            res.status(201).set('Location', `/api/v1/courses/${courseId}`).json({id:courseId});
         }
     );
-app.route('/courses/:id')
+app.route('/api/v1/courses/:id')
     .get(
         param('id').isInt().toInt(),
         validate,
@@ -197,7 +200,7 @@ app.route('/courses/:id')
             res.sendStatus(result ? 204 : 500);
         }
     );
-app.route('/courses/:id/courseEvaluations')
+app.route('/api/v1/courses/:id/courseEvaluations')
     .get(
         param('id').isInt().toInt(),
         validate,
@@ -206,23 +209,27 @@ app.route('/courses/:id/courseEvaluations')
             res.setRole(ROLE_ADMIN).sendWithRole(courseEvaluations);
         }
     );
-app.route('/courses/:id/courseEvaluations/:enrollee')
+app.route('/api/v1/courses/:id/courseEvaluations/:enrollee')
     .get(
         param('id').isInt().toInt(),
         param('enrollee').isInt().toInt(),
         validate,
         async (req, res) => {
             const courseEvaluation = await model.EvaluatedCourse.findByCourseIdAndEnrolleeId(req.params.id, req.params.enrollee);
-            res.setRole(ROLE_ADMIN).sendWithRole(courseEvaluation);
+            if (courseEvaluation == undefined) {
+                res.sendStatus(404);
+            } else {
+                res.setRole(ROLE_ADMIN).sendWithRole(courseEvaluation);
+            }
         }
     );
-app.route('/courses/:id/enrollments')
+app.route('/api/v1/courses/:id/enrollments')
     .get(
         param('id').isInt().toInt(),
         validate,
         async (req, res) => {
             const enrollments = await model.Enrollment.findManyByCourseId(req.params.id);
-            res.setRole(ROLE_ADMIN).sendWithRole(enrollments);
+            res.setRole(ROLE_INSTRUCTOR).sendWithRole(enrollments);
         }
     )
     .post(
@@ -236,11 +243,11 @@ app.route('/courses/:id/enrollments')
             if (enrollmentId == undefined) {
                 res.sendStatus(500);
             } else {
-                res.status(201).set('Location', `/enrollments/${enrollmentId}`).json({id:enrollmentId});
+                res.status(201).set('Location', `/api/v1/enrollments/${enrollmentId}`).json({id:enrollmentId});
             }
         }
     );
-app.route('/courses/:id/scale')
+app.route('/api/v1/courses/:id/scale')
     .get(
         param('id').isInt().toInt(),
         validate,
@@ -261,7 +268,7 @@ app.route('/courses/:id/scale')
             res.sendStatus(result ? 204 : 500);
         }
     );
-app.route('/courses/:id/weights')
+app.route('/api/v1/courses/:id/weights')
     .get(
         param('id').isInt().toInt(),
         validate,
@@ -282,11 +289,11 @@ app.route('/courses/:id/weights')
             if (weightId == undefined) {
                 res.sendStatus(500);
             } else {
-                res.status(201).set('Location', `/weights/${id}`).json({id:weightId});
+                res.status(201).set('Location', `/api/v1/weights/${id}`).json({id:weightId});
             }
         }
     );
-app.route('/enrollments/:id')
+app.route('/api/v1/enrollments/:id') // TODO: split this into 2 routes
     .get(
         param('id').isInt().toInt(),
         validate,
@@ -318,16 +325,31 @@ app.route('/enrollments/:id')
             res.sendStatus(result ? 204 : 500);
         }
     );
-app.route('/enrollments/:id/getLinkToken')
+app.route('/api/v1/enrollments/:id/unlink')
+    .post(
+        param('id').isInt().toInt(),
+        validate,
+        async (req, res) => {
+            const result = await model.Enrollment.unlinkStudent(req.params.id);
+            await model.EnrollmentUserLinkToken.cancel(req.params.id);
+
+            res.sendStatus(result ? 204 : 500);
+        }
+    )
+app.route('/api/v1/enrollments/:id/getLinkToken')
     .post(
         param('id').isInt().toInt(),
         validate,
         async (req, res) => {
             const token = await model.EnrollmentUserLinkToken.create(req.params.id);
-            res.json(token);
+            if (token == undefined) {
+                res.sendStatus(500);
+            } else {
+                res.json(token);
+            }
         }
     );
-app.route('/weights/:id')
+app.route('/api/v1/weights/:id')
     .get(
         param('id').isInt().toInt(),
         validate,
@@ -360,7 +382,7 @@ app.route('/weights/:id')
             res.sendStatus(result ? 204 : 500);
         }
     );
-app.route('/weights/:id/weightEvaluations')
+app.route('/api/v1/weights/:id/weightEvaluations')
     .get(
         param('id').isInt().toInt(),
         validate,
@@ -369,7 +391,7 @@ app.route('/weights/:id/weightEvaluations')
             res.setRole(ROLE_ADMIN).sendWithRole(evaluatedWeights);
         }
     );
-app.route('/weights/:id/weightEvaluations/:enrollee')
+app.route('/api/v1/weights/:id/weightEvaluations/:enrollee')
     .get(
         param('id').isInt().toInt(),
         param('enrollee').isInt().toInt(),
@@ -383,7 +405,7 @@ app.route('/weights/:id/weightEvaluations/:enrollee')
             }
         }
     );
-app.route('/weights/:id/assignments')
+app.route('/api/v1/weights/:id/assignments')
     .get(
         param('id').isInt().toInt(),
         validate,
@@ -402,12 +424,12 @@ app.route('/weights/:id/assignments')
             if (result == undefined) {
                 res.sendStatus(404);
             } else {
-                res.status(201).set('Location', `/assignments/${assignmentId}`).json({id:assignmentId});
+                res.status(201).set('Location', `/api/v1/assignments/${assignmentId}`).json({id:assignmentId});
             }
         }
     );
 
-app.route('/assignments/:id')
+app.route('/api/v1/assignments/:id')
     .get(
         param('id').isInt().toInt(),
         validate,
@@ -438,7 +460,7 @@ app.route('/assignments/:id')
             res.sendStatus(result ? 204 : 500);
         }
     );
-app.route('/assignments/:id/evaluations')
+app.route('/api/v1/assignments/:id/evaluations')
     .get(
         param('id').isInt().toInt(),
         validate,
@@ -447,7 +469,7 @@ app.route('/assignments/:id/evaluations')
             res.setRole(ROLE_ADMIN).sendWithRole(evaluations);
         }
     );
-app.route('/assignments/:id/evaluations/:enrollee')
+app.route('/api/v1/assignments/:id/evaluations/:enrollee')
     .get(
         param('id').isInt().toInt(),
         param('enrollee').isInt().toInt(),

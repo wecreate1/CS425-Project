@@ -1,7 +1,0 @@
-{
-  "dependencies": {
-    "dedent": "^1.5.1",
-    "express-validator": "^7.0.1",
-    "sql-template-strings": "^2.2.2"
-  }
-}

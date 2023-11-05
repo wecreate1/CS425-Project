@@ -1,10 +1,12 @@
-import { Pool } from 'pg';
+import pg from 'pg';
 import sqlUtil from 'sql-template-strings';
 import dedent from 'dedent';
 
-const pool = new Pool();
+const { Pool } = pg;
 
-export const query = (text, param, callback) => {
+const pool = new pg.Pool();
+
+export const query = (text, params, callback) => {
     return pool.query(text, params, callback);
 }
 
@@ -12,6 +14,6 @@ export const getClient = () => {
     return pool.connect();
 }
 
-const sql = (...params) => {
-    return dedent(sqlUtil(...params))
+export const sql = (...params) => {
+    return sqlUtil(...params);
 }
