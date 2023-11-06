@@ -5,6 +5,7 @@ import { sql } from './db/index.js';
 import * as model from './model/index.js';
 import express from 'express';
 import { query, param, validationResult, body } from 'express-validator';
+import { devAuthProvider } from './devAuthService.js';
 // import { randomUUID } from 'node:crypto';
 
 function validate(req, res, next) {
@@ -71,6 +72,8 @@ app.listen(3000);
 
 app.use(express.json());
 app.use(roleMw);
+
+app.use('/oidc', devAuthProvider);
 
 app.route('/api/v1/users')
     .get(
