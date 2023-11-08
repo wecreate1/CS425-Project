@@ -2,6 +2,161 @@ import * as db from '../db/index.js';
 import { sql } from '../db/index.js';
 import * as pg_format from 'pg-format';
 
+// class Claim
+
+export class Subject {
+    constructor(sub) {
+        this.sub = sub;
+    }
+
+    static wrapper(funcName) {
+        return (idParam = 'id') =>
+            async (req, res, next) => {
+                const result = await (new Subject(req.auth.payload.sub))[funcName](req.param[idParam])
+                if (result) {
+                    req.subject = result;
+                    next();
+                } else {
+                    res.sendStatus(403);
+                }
+            };
+    }
+
+    async isUser(id) {
+        const result = await db.query(sql`
+            SELECT 1
+            FROM OIDCSubject
+            WHERE sub=${this.sub} AND user_id=${id};
+        `);
+
+        return result.rows.length == 1 ? 'isUser' : undefined;
+    }
+
+    async isStudentOfCourse(id) {
+        const result = await db.query(sql`
+            SELECT 1
+            FROM Enrollments INNER JOIN OIDCSubject ON Enrollments.student_id=OIDCSubject.user_id
+            WHERE Enrollments.course_id=${id} AND OIDCSubject.sub=${this.sub};
+        `);
+
+        return result.rows.length == 1 ? 'isStudent' : undefined;
+    }
+
+    async isInstructorOfCourse(id) {
+        const result = await db.query(sql`
+            SELECT 1
+            FROM Instructs INNER JOIN OIDCSubject ON Instructs.instructor_id=OIDCSubject.user_id
+            WHERE Instructs.course_id=${id} AND OIDCSubject.sub=${this.sub};
+        `);
+
+        return result.rows.length == 1 ? 'isInstructor' : undefined;
+    }
+
+    async isInstructorOrStudentOfCourse(id) {
+        return this.isStudentOfCourse(id) || this.isInstructorOfCourse(id);
+    }
+
+    async isInstructorOfEnrollment(id) {
+        const result = await db.query(sql`
+            SELECT 1
+            FROM Enrollments
+                INNER JOIN Instructs ON Enrollments.course_id=Instructs.course_id
+                INNER JOIN OIDCSubject ON Instructs.instructor_id=OIDCSubject.user_id
+            WHERE Enrollments.id=${id} AND OIDCSubject.sub=${this.sub}
+        `);
+
+        return result.rows.length == 1 ? 'isInstructor' : undefined;
+    }
+
+    async isStudentOfEnrollment(id) {
+        const result = await db.query(sql`
+            SELECT 1
+            FROM Enrollments INNER JOIN ON OIDCSubject ON Enrollments.student_id=OIDCSubject=${user_id}
+            WHERE Enrollments.id=${id} AND OIDCSubject.sub=${this.sub};
+        `);
+
+        return result.rows.length == 1 ? 'isStudent' : undefined;
+    }
+
+    async isInstructorOrStudentOfEnrollment(id) {
+        return this.isInstructorOfEnrollment(id) || this.isStudentOfEnrollment(id);
+    }
+
+    async isInstructorOfWeight(id) {
+        const result = await db.query(sql`
+            SELECT 1
+            FROM Weights
+                INNER JOIN Instructs ON Weights.course_id=Instructs.course_id
+                INNER JOIN OIDCSubject ON Instructs.instructor_id=OIDCSubject.user_id
+            WHERE Weights.id=${id} AND OIDCSubject.sub=${this.sub}
+        `);
+
+        return result.rows.length == 1 ? 'isInstructor' : undefined;
+    }
+
+    async isStudentOfWeight(id) {
+        const result = await db.query(sql`
+            SELECT 1
+            FROM Weights
+                INNER JOIN Enrollments ON Weights.course_id=Enrollments.course_id
+                INNER JOIN ON OIDCSubject ON Enrollments.student_id=OIDCSubject=${user_id}
+            WHERE Weights.id=${id} AND OIDCSubject.sub=${this.sub};
+        `);
+
+        return result.rows.length == 1 ? 'isStudent' : undefined;
+    }
+
+    async isInstructorOrStudentOfWeight(id) {
+        return this.isInstructorOfWeight(id) || this.isStudentOfWeight(id);
+    }
+
+    async isInstructorOfAssignment(id) {
+        const result = await db.query(sql`
+            SELECT 1
+            FROM Assignments
+                INNER JOIN Weights ON Assignments.weight_id=Weights.id
+                INNER JOIN Instructs ON Weights.course_id=Instructs.course_id
+                INNER JOIN OIDCSubject ON Instructs.instructor_id=OIDCSubject.user_id
+            WHERE Assignments.id=${id} AND OIDCSubject.sub=${this.sub}
+        `);
+
+        return result.rows.length == 1 ? 'isInstructor' : undefined;
+    }
+
+    async isStudentOfAssignment(id) {
+        const result = await db.query(sql`
+            SELECT 1
+            FROM Assignments
+                INNER JOIN Weights ON Assignments.weight_id=Weights.id
+                INNER JOIN Enrollments ON Weights.course_id=Enrollments.course_id
+                INNER JOIN ON OIDCSubject ON Enrollments.student_id=OIDCSubject=${user_id}
+            WHERE Assignments.id=${id} AND OIDCSubject.sub=${this.sub};
+        `);
+
+        return result.rows.length == 1 ? 'isStudent' : undefined;
+    }
+
+    async isInstructorOrStudentOfAssignment(id) {
+        return this.isInstructorOfAssignment(id) || this.isStudentOfAssignment(id);
+    }
+}
+
+export const subject = {
+    isUser: Subject.wrapper('isUser'),
+    isStudentOfCourse: Subject.wrapper('isStudentOfCourse'),
+    isInstructorOfCourse: Subject.wrapper('isInstructorOfCourse'),
+    isInstructorOrStudentOfCourse: Subject.wrapper('isInstructorOrStudentOfCourse'),
+    isInstructorOfEnrollment: Subject.wrapper('isInstructorOfEnrollment'),
+    isStudentOfEnrollment: Subject.wrapper('isStudentOfEnrollment'),
+    isInstructorOrStudentOfEnrollment: Subject.wrapper('isInstructorOrStudentOfEnrollment'),
+    isInstructorOfWeight: Subject.wrapper('isInstructorOfWeight'),
+    isStudentOfWeight: Subject.wrapper('isStudentOfWeight'),
+    isInstructorOrStudentOfWeight: Subject.wrapper('isInstructorOrStudentOfWeight'),
+    isInstructorOfAssignment: Subject.wrapper('isInstructorOfAssignment'),
+    isStudentOfAssignment: Subject.wrapper('isStudentOfAssignment'),
+    isInstructorOrStudentOfAssignment: Subject.wrapper('isInstructorOrStudentOfAssignment'),
+};
+
 export class User {
     constructor(obj) {
         ({id: this.id, name: this.name} = obj);
@@ -28,16 +183,50 @@ export class User {
         return result.rows.map((obj) => new User(obj));
     }
 
-    static async create(obj) {
+    static async findBySubject(sub) {
         const result = await db.query(sql`
-            INSERT INTO Users (name)
-            VALUES (${obj.name})
-            RETURNING id;
+            SELECT Users.id, Users.name
+            FROM Users INNER JOIN OIDCSubject ON Users.id=OIDCSubject.user_id
+            WHERE OIDCSubject=${sub}
         `);
 
-        if (result.rows.length  == 1) {
-            return result.rows[0].id;
+        if (result.rows.length == 1) {
+            return new User(result.rows[0]);
         }
+    }
+
+    static async createWithSubject(sub, obj) {
+        const client = await db.getClient();
+        try {
+            await client.query('BEGIN');
+            const userId = await db.query(sql`
+                INSERT INTO Users (name)
+                VALUES (${obj.name})
+                RETURNING id;
+            `);
+
+            if (userId.rows.length != 1) {
+                throw null;
+            }
+
+            const result = await db.query(sql`
+                INSERT INTO OIDCSubject (sub, user_id)
+                VALUES (${sub}, ${userId.rows[0].id});
+            `);
+
+            if (result.rowCount != 1) {
+                throw null;
+            }
+
+            await client.query('COMMIT');
+
+            return userId.rows[0].id;
+        } catch (e) {
+            await client.query('ROLLBACK');
+        } finally {
+            client.release();
+        }
+
     }
 
     static async update(id, obj) {

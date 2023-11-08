@@ -3,38 +3,38 @@ info:
   title: OpenAPI 3.0
   version: '1.0'
 paths:
-  /api/v1/users:
-    post:
-      tags:
-        - users
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                name:
-                  type: string
-      responses:
-        '201':
-          description: |-
-            201 Response
-          headers:
-            location:
-              description: /api/v1/users/:id
-              schema:
-                type: string
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  id:
-                    type: integer
-        '500':
-          description: |-
-            500 Response
+  # /api/v1/users:
+  #   post:
+  #     tags:
+  #       - users
+  #     requestBody:
+  #       required: true
+  #       content:
+  #         application/json:
+  #           schema:
+  #             type: object
+  #             properties:
+  #               name:
+  #                 type: string
+  #     responses:
+  #       '201':
+  #         description: |-
+  #           201 Response
+  #         headers:
+  #           location:
+  #             description: /api/v1/users/:id
+  #             schema:
+  #               type: string
+  #         content:
+  #           application/json:
+  #             schema:
+  #               type: object
+  #               properties:
+  #                 id:
+  #                   type: integer
+  #       '500':
+  #         description: |-
+  #           500 Response
   /api/v1/users/{id}:
     parameters:
       - name: id
@@ -90,6 +90,43 @@ paths:
         '500':
           description: |-
             500 Response
+  /api/v1/users/me:
+    get:
+      tags:
+        - users
+      responses:
+        '201':
+          description: |-
+            201 Response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      userCreationRequired:
+                        type: boolean
+                  - type: object
+                    properties:
+                      id:
+                        type: integer
+                      name:
+                        type: string
+    post:
+      tags:
+        - users
+      responses:
+        '200':
+          description: |-
+            200 Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+          
   /api/v1/users/{id}/enrollments:
     parameters:
       - name: id

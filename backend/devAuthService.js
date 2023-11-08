@@ -8,7 +8,7 @@ const configuration = {
         client_id: 'projectspa',
         client_secret: 'some_nonsense',
         grant_types: ['refresh_token', 'authorization_code'],
-        redirect_uris: ['http://localhost:3000/*', 'https://oauthdebugger.com/debug'],
+        redirect_uris: ['http://localhost:3000/*'],
         scope: "openid"
     }],
     // jwks: {
