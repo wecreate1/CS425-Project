@@ -5,7 +5,7 @@ Instructions for use
 2. setup the database: on linux I do this: `psql -h localhost -U postgres -f db/db.ddl.sql`
 3. ensure the PG* variables in backend/.env are correct
 4. In backend/ run `npm install` (assuming you have npm installed)
-5. In backend/ `npm start`
+5. In backend/ `npm start` (warnings from `oidc-provider` can be ignored for now)
 
 The backend should now be running on localhost:3000. If you navigate to [http://localhost:3000/swagger/index.html](http://localhost:3000/swagger/index.html) you should be presented with a list of api endpoints. This page allows you to try out the api after you authenticate.
 
