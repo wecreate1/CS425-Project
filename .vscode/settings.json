@@ -1,0 +1,6 @@
+{
+    "yaml.schemas": {
+        "file:///home/jimmy/.vscode/extensions/atlassian.atlascode-2.10.12/resources/schemas/pipelines-schema.json": "bitbucket-pipelines.yml",
+        "https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/schemas/v3.1/schema.json": "file:///home/jimmy/Code/cs425-project/backend/swagger.yml"
+    }
+}
