@@ -19,7 +19,8 @@
     "oidc-provider": "^8.4.1",
     "pg": "^8.11.3",
     "pg-format": "^1.0.4",
-    "sql-template-strings": "^2.2.2"
+    "sql-template-strings": "^2.2.2",
+    "swagger-ui-dist": "^5.9.1"
   },
   "type": "module"
 }

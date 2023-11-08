@@ -7,6 +7,9 @@ import express from 'express';
 import { query, param, validationResult, body } from 'express-validator';
 import { devAuthProvider } from './devAuthService.js';
 import { auth } from 'express-oauth2-jwt-bearer';
+import swagger from 'swagger-ui-dist';
+import path from 'node:path';
+import { fileURLToPath } from 'url';
 // import { randomUUID } from 'node:crypto';
 
 const subject = model.subject;
@@ -85,6 +88,11 @@ app.use('/api', express.json());
 app.use('/api', roleMw);
 app.use('/api', auth());
 
+app.use('/swagger.yml', express.static(path.join(path.dirname(fileURLToPath(import.meta.url)), 'swagger.yml')));
+app.use('/swagger/index.html', express.static(path.join(path.dirname(fileURLToPath(import.meta.url)), 'swagger.html')));
+app.get('/swagger/', (req, res) => res.redirect('/swagger/index.html'));
+app.use('/swagger/', express.static(swagger.absolutePath()));
+
 app.use('/oidc', devAuthProvider);
 
 // app.route('/api/v1/users')
@@ -105,6 +113,27 @@ app.use('/oidc', devAuthProvider);
 //             }
 //         }
 //     )
+app.route('/api/v1/users/me')
+    .get(async (req, res) => {
+        const user = await model.User.findBySubject(req.auth.payload.sub);
+        if (user == undefined) {
+            res.json({userCreationRequired: true});
+        } else {
+            res.setRole(ROLE_USER).sendWithRole(user);
+        }
+    })
+    .post(
+        body('name').isString(),
+        validate,
+        async (req, res) => {
+            const userId = await model.User.createWithSubject(req.auth.payload.sub, req.body);
+            if (userId == undefined) {
+                res.sendStatus(500);
+            } else {
+                res.status(201).set('Location', `/api/v1/users/${userId}`).json({id:userId});
+            }
+        }
+    )
 app.route('/api/v1/users/:id')
     .get(
         param('id').isInt().toInt(),
@@ -138,27 +167,6 @@ app.route('/api/v1/users/:id')
             res.sendStatus(result ? 204 : 500);
         }
     );
-app.route('/api/v1/users/me')
-    .get(async (req, res) => {
-        const user = await model.User.findBySubject(req.auth.payload.sub);
-        if (user == undefined) {
-            res.json({userCreationRequired: true});
-        } else {
-            res.setRole(ROLE_USER).sendWithRole(user);
-        }
-    })
-    .post(
-        body('name').isString(),
-        validate,
-        async (req, res) => {
-            const userId = await model.User.createWithSubject(req.auth.payload.sub, req.body);
-            if (user == undefined) {
-                res.sendStatus(500);
-            } else {
-                res.status(201).set('Location', `/api/v1/users/${userId}`).json({id:userId});
-            }
-        }
-    )
 app.route('/api/v1/users/:id/enrollments')
     .get(
         param('id').isInt().toInt(),

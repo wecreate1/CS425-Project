@@ -2,6 +2,13 @@ openapi: 3.0.3
 info:
   title: OpenAPI 3.0
   version: '1.0'
+components:
+  securitySchemes:
+    OpenID:
+      type: openIdConnect
+      openIdConnectUrl: http://localhost:3000/oidc/.well-known/openid-configuration
+security:
+  - OpenID: []
 paths:
   # /api/v1/users:
   #   post:
@@ -115,6 +122,15 @@ paths:
     post:
       tags:
         - users
+      requestBody:
+            required: true
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    name:
+                      type: string
       responses:
         '200':
           description: |-

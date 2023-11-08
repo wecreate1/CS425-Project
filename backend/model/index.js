@@ -12,7 +12,7 @@ export class Subject {
     static wrapper(funcName) {
         return (idParam = 'id') =>
             async (req, res, next) => {
-                const result = await (new Subject(req.auth.payload.sub))[funcName](req.param[idParam])
+                const result = await (new Subject(req.auth.payload.sub))[funcName](req.params[idParam])
                 if (result) {
                     req.subject = result;
                     next();
@@ -187,7 +187,7 @@ export class User {
         const result = await db.query(sql`
             SELECT Users.id, Users.name
             FROM Users INNER JOIN OIDCSubject ON Users.id=OIDCSubject.user_id
-            WHERE OIDCSubject=${sub}
+            WHERE OIDCSubject.sub=${sub};
         `);
 
         if (result.rows.length == 1) {
