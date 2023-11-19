@@ -1,0 +1,100 @@
+@use "@material/theme" with (
+  $primary: darkcyan,
+  $secondary: #8b0000
+);
+
+@use '@material/elevation';
+@use "@material/shape";
+
+@use "@material/floating-label/mdc-floating-label";
+@use "@material/line-ripple/mdc-line-ripple";
+@use "@material/notched-outline/mdc-notched-outline";
+@use "@material/textfield";
+
+@use "@material/button/styles";
+
+@use "@material/list";
+
+@include list.deprecated-core-styles;
+
+@include textfield.core-styles;
+
+html, body {
+    height: 100%;
+    background-color: theme.$primary;
+}
+
+body {
+    display: flex;
+    flex-flow: row wrap;
+    align-content: center;
+    justify-content: center;
+    
+}
+
+.login-page {
+    font-family: 'Roboto';
+}
+
+.header {
+    text-align: center;
+}
+
+.username {
+    display: block;
+    width: 100%;
+    margin: 20px auto;
+}
+
+.button-container {
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
+    margin: auto;
+}
+
+.button-container button {
+    margin: 3px;
+}
+
+.button-container-consent {
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
+    margin: auto;
+}
+
+.button-container-consent button {
+    margin: 3px;
+    flex: 1;
+}
+
+.dialog {
+    padding: 20px;
+    width: 350px;
+    margin: 10px;
+    background-color: white;
+    @include shape.radius(12px);
+    @include elevation.elevation(24);
+}
+
+.presets {
+    padding: 20px;
+    width: 350px;
+    margin: 10px;
+    background-color: white;
+    @include shape.radius(12px);
+    @include elevation.elevation(12);
+}
+
+.presets h2 {
+    padding-left: 16px;
+    margin-top: 6px;
+    margin-bottom: 1px;
+    font-size: 20px;
+}
+
+.preset-button {
+    all: unset;
+    width: 100%;
+}

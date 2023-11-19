@@ -5,11 +5,13 @@ import { sql } from './db/index.js';
 import * as model from './model/index.js';
 import express from 'express';
 import { query, param, validationResult, body } from 'express-validator';
-import { devAuthProvider } from './devAuthService.js';
+import { devAuthProvider } from './devAuthService/index.js';
 import { auth } from 'express-oauth2-jwt-bearer';
 import swagger from 'swagger-ui-dist';
 import path from 'node:path';
 import { fileURLToPath } from 'url';
+import audit from 'express-requests-logger'
+import bunyan from 'bunyan';
 // import { randomUUID } from 'node:crypto';
 
 const subject = model.subject;
@@ -83,6 +85,9 @@ function isJSONInteger(val) {
 
 const app = express();
 app.listen(3000);
+
+// app.use(express.urlencoded())
+// app.use(audit());
 
 app.use('/api', express.json());
 app.use('/api', roleMw);

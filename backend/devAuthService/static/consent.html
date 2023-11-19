@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CS425 Consent Page</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700">
+  <link rel="stylesheet" href="/oidc/interactions/static/bundle.css">
+</head>
+<body class="login-page">
+    <div class="dialog">
+        <section class="header">
+            <h1>CS425 Project</h1>
+            <p>Do you consent to allow third-party apps access to your data? </p>
+        </section>
+        <form>
+            <div class="button-container-consent">
+                <button formaction="abort" type="post" type="submit" class="mdc-button mdc-button--outlined disagree">
+                    <span class="mdc-button__ripple"></span>
+                    <span class="mdc-button__label">Cancel</span>
+                </button>
+                <button formaction="consent" type="post" type="submit" class="mdc-button mdc-button--outlined agree">
+                    <span class="mdc-button__ripple"></span>
+                    <span class="mdc-button__label">Allow</span>
+                </button>
+            </div>
+        </form>
+    </div>
+    <script src="/oidc/interactions/static/consent-bundle.js" async></script>
+</body>
+</html>

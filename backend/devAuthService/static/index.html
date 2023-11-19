@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CS425 Login Page</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700">
+  <link rel="stylesheet" href="/oidc/interactions/static/bundle.css">
+</head>
+<body class="login-page">
+    <div class="dialog">
+        <section class="header">
+            <h1>CS425 Project</h1>
+            <p>Dev Login</p>
+        </section>
+        <form action="login" method="post">
+            <label class="mdc-text-field mdc-text-field--outlined username">
+                <span class="mdc-notched-outline">
+                    <span class="mdc-notched-outline__leading"></span>
+                    <span class="mdc-notched-outline__notch">
+                        <span class="mdc-floating-label" id="my-label-id">Username</span>
+                    </span>
+                    <span class="mdc-notched-outline__trailing"></span>
+                </span>
+                <input required name="username" autocomplete="username" type="text" class="mdc-text-field__input" aria-labelledby="my-label-id" autofocus>
+            </label>
+            <div class="button-container">
+                <a href="abort" class="mdc-button cancel">
+                    <span class="mdc-button__ripple"></span>
+                    <span class="mdc-button__label">Cancel</span>
+                </a>
+                <button type="submit" class="mdc-button mdc-button--raised sign-in">
+                    <span class="mdc-button__ripple"></span>
+                    <span class="mdc-button__label">Sign In</span>
+                </button>
+            </div>
+        </form>
+    </div>
+    <div class="presets">
+        <h2>Presets</h2>
+        <ul class="mdc-deprecated-list preset-list">
+            <form action="login" method="post">
+                <input name="username" value="alice" hidden>
+                <button type="submit" class="preset-button" tabindex="-1">
+                    <ul class="mdc-deprecated-list-item" tabindex="0">
+                        <span class="mdc-deprecated-list-item__ripple"></span>
+                        <span class="mdc-deprecated-list-item__text">Alice</span>
+                    </ul>
+                </button>
+            </form>
+            <form action="login" method="post">
+                <input name="username" value="bob" hidden>
+                <button type="submit" class="preset-button" tabindex="-1">
+                    <ul class="mdc-deprecated-list-item">
+                        <span class="mdc-deprecated-list-item__ripple"></span>
+                        <span class="mdc-deprecated-list-item__text">Bob</span>
+                    </ul>
+                </button>
+            </form>
+            <form action="login" method="post">
+                <input name="username" value="cassy" hidden>
+                <button type="submit" class="preset-button" tabindex="-1">
+                    <ul class="mdc-deprecated-list-item">
+                        <span class="mdc-deprecated-list-item__ripple"></span>
+                        <span class="mdc-deprecated-list-item__text">Cassy</span>
+                    </ul>
+                </button>
+            </form>
+            <form action="login" method="post">
+                <input name="username" value="donald" hidden>
+                <button type="submit" class="preset-button" tabindex="-1">
+                    <ul class="mdc-deprecated-list-item">
+                        <span class="mdc-deprecated-list-item__ripple"></span>
+                        <span class="mdc-deprecated-list-item__text">Donald</span>
+                    </ul>
+                </button>
+            </form>
+            
+        </ul>
+        <!-- <form action="login" method="post">
+            <input name="username" value="alice" hidden>
+
+        </form> -->
+
+    </div>
+    <script src="/oidc/interactions/static/bundle.js" async></script>
+</body>
+</html>
