@@ -12,13 +12,20 @@ const configuration = {
         client_id: 'projectspa',
         client_uri: 'http://localhost:3000',
         grant_types: ['refresh_token', 'authorization_code'],
-        response_type: ['token'],
-        redirect_uris: ['http://localhost:3000/swagger/oauth2-redirect.html'],
+        response_type: ['code id_token',
+        'code',
+        'id_token',
+        'none'],
+        redirect_uris: ['http://localhost:3000/swagger/oauth2-redirect.html', 'http://localhost:4200/callback'],
+        post_logout_redirect_uris: ['http://localhost:4200'],
         scope: "openid",
+        pkce: {
+            required: true
+        },
         token_endpoint_auth_method: 'none',
     }],
     clientBasedCORS(ctx, origin, client) {
-        return origin=="http://localhost:3000";
+        return origin=="http://localhost:3000" || origin=="http://localhost:4200";
     },
     interactions: {
         url(ctx, interaction) {
@@ -77,6 +84,7 @@ const configuration = {
                 });
         
                 grant.addOIDCScope('openid');
+                grant.addOIDCScope('offline_access');
                 await grant.save();
                 return grant;
             }
@@ -125,14 +133,14 @@ router.get('/interactions/:uid/', setNoCache, async (req, res) => {
       }
 });
 
-router.post('/interactions/:uid/login', setNoCache, express.urlencoded(), async (req, res) => {
+router.post('/interactions/:uid/login', setNoCache, express.urlencoded({extended: true}), async (req, res) => {
     const { prompt: { name } } = await provider.interactionDetails(req, res);
     if (name == 'login') {
         await provider.interactionFinished(req, res, {login: {accountId: req.body.username}}, {mergeWithLastSubmission: false});
     }
 })
 
-router.post('/interactions/:uid/consent', setNoCache, express.urlencoded(), async (req, res) => {
+router.post('/interactions/:uid/consent', setNoCache, express.urlencoded({extended: true}), async (req, res) => {
     const interactionDetails = await provider.interactionDetails(req, res);
     const { prompt: { name, details }, params, session: { accountId } } = interactionDetails;
     if (name == 'login') {
