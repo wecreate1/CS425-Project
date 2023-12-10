@@ -4,6 +4,7 @@ import * as db from './db/index.js';
 import { sql } from './db/index.js';
 import * as model from './model/index.js';
 import express from 'express';
+import cors from 'cors';
 import { query, param, validationResult, body } from 'express-validator';
 import { devAuthProvider } from './devAuthService/index.js';
 import { auth } from 'express-oauth2-jwt-bearer';
@@ -91,7 +92,8 @@ app.listen(3000);
 
 app.use('/api', express.json());
 app.use('/api', roleMw);
-app.use('/api', auth());
+app.use('/api', cors({origin: ['http://localhost:3000','http://localhost:4200'], optionsSuccessStatus: 200}));
+app.use('/api', auth({authRequired:true}));
 
 app.use('/swagger.yml', express.static(path.join(path.dirname(fileURLToPath(import.meta.url)), 'swagger.yml')));
 app.use('/swagger/index.html', express.static(path.join(path.dirname(fileURLToPath(import.meta.url)), 'swagger.html')));

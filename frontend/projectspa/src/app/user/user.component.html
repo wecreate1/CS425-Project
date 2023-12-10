@@ -1,0 +1,14 @@
+<ng-template [ngIf]="userCreationRequired">
+    <p>User Creation Required</p>
+    <form (ngSubmit)="submit()">
+        <p>User Name: <input type="text" [(ngModel)]="userName" name="User Name"></p>
+        <p><input type="submit"></p>
+    </form>
+</ng-template>
+<ng-template [ngIf]="!userCreationRequired">
+    <form (ngSubmit)="submit()">
+        <p>User ID: {{userId}}</p>
+        <p>User Name: <input type="text" [(ngModel)]="userName" name="User Name"></p>
+        <p><button (click)="delete()">Delete</button><input type="submit"></p>
+    </form>
+</ng-template>

@@ -1,7 +1,8 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
-import { LoginResponse, OidcSecurityService } from 'angular-auth-oidc-client';
+import { AuthInterceptor, LoginResponse, OidcSecurityService } from 'angular-auth-oidc-client';
+import { HTTP_INTERCEPTORS } from '@angular/common/http';
 
 @Component({
   selector: 'app-root',
@@ -22,5 +23,9 @@ export class AppComponent {
     //       loginResponse;
     //     /*...*/
     //   });
+  }
+
+  logout() {
+    this.oidcSecurityService.logoff().subscribe();
   }
 }

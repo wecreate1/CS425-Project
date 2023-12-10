@@ -12,5 +12,6 @@ export const authConfig: PassedInitialConfig = {
               useRefreshToken: true,
               renewTimeBeforeTokenExpiresInSeconds: 30,
               autoUserInfo: false,
+              secureRoutes: ['http://localhost:3000/api/','http://localhost:4200/api/']
           }
 }
