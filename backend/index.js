@@ -299,7 +299,7 @@ app.route('/api/v1/courses/:id/enrollments')
     .post(
         param('id').isInt().toInt(),
         body('name').isString(),
-        body('email').optional().isEmail(),
+        body('email').optional().isString(),
         body('metadata').optional().isString(),
         subject.isInstructorOfCourse(),
         validate,

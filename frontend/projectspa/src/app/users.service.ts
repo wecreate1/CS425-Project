@@ -1,11 +1,8 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
+import { Course, User, Enrollment } from './types';
 
-export interface User {
-  id: number
-  name: string
-  userCreationRequired? : undefined
-}
+
 
 interface UserCreationRequired {
   userCreationRequired: true
@@ -36,5 +33,21 @@ export class UsersService {
 
   deleteUser(id: number) {
     return this.http.delete(`http://localhost:3000/api/v1/users/${id}`);
+  }
+
+  getInstructing(id: number) {
+    return this.http.get<Course[]>(`http://localhost:3000/api/v1/users/${id}/instructs`);
+  }
+
+  addCourse(id: number, name: string, credits: number) {
+    return this.http.post(`http://localhost:3000/api/v1/users/${id}/instructs`, {name, credits});
+  }
+
+  getEnrollments(id: number) {
+    return this.http.get<Enrollment[]>(`http://localhost:3000/api/v1/users/${id}/enrollments`);
+  }
+
+  linkCourse(id: number, token: string) {
+    return this.http.post(`http://localhost:3000/api/v1/users/${id}/enrollments/link`, {token});
   }
 }

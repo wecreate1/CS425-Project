@@ -1,0 +1,36 @@
+<form (submit)="submit()">
+    <p>Course ID: {{id}}</p>
+    <p>Course Name: <input type="text" [(ngModel)]="name" name="Course Name"></p>
+    <p>Course Credits: <input type="number" [(ngModel)]="credits" name="Course Credits"></p>
+    <p><button (click)="delete()">Delete</button><input type="submit"></p>
+</form>
+<details>
+    <summary>Add Enrollment</summary>
+    <form (submit)="addEnrollment()">
+        <p>Enrollee Name: <input type="text" [(ngModel)]="enrolleeName" name="Enrollee Name"></p>
+        <p>Enrollee Email: <input type="email" [(ngModel)]="enrolleeEmail" name="Enrollee Name"></p>
+        <p>Enrollee Metadata: <input type="text" [(ngModel)]="enrolleeMetadata" name="Enrollee Name"></p>
+        <p><input type="submit"></p>
+    </form>
+</details>
+<h3>Enrollments</h3>
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Metadata</th>
+            <th>isLinked</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr *ngFor="let enrollment of enrollments" [routerLink]="['/enrollment', enrollment.id]">
+            <td><a href="javascript:void">{{enrollment.id}}</a></td>
+            <td>{{enrollment.name}}</td>
+            <td>{{enrollment.email}}</td>
+            <td>{{enrollment.metadata}}</td>
+            <td>{{enrollment.isLinked}}</td>
+        </tr>
+    </tbody>
+</table>

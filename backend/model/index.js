@@ -48,12 +48,11 @@ export class Subject {
             FROM Instructs INNER JOIN OIDCSubject ON Instructs.instructor_id=OIDCSubject.user_id
             WHERE Instructs.course_id=${id} AND OIDCSubject.sub=${this.sub};
         `);
-
         return result.rows.length == 1 ? 'isInstructor' : undefined;
     }
 
     async isInstructorOrStudentOfCourse(id) {
-        return this.isStudentOfCourse(id) || this.isInstructorOfCourse(id);
+        return await this.isStudentOfCourse(id) || await this.isInstructorOfCourse(id);
     }
 
     async isInstructorOfEnrollment(id) {
@@ -71,7 +70,7 @@ export class Subject {
     async isStudentOfEnrollment(id) {
         const result = await db.query(sql`
             SELECT 1
-            FROM Enrollments INNER JOIN ON OIDCSubject ON Enrollments.student_id=OIDCSubject=${user_id}
+            FROM Enrollments INNER JOIN OIDCSubject ON Enrollments.student_id=OIDCSubject.user_id
             WHERE Enrollments.id=${id} AND OIDCSubject.sub=${this.sub};
         `);
 
@@ -79,7 +78,7 @@ export class Subject {
     }
 
     async isInstructorOrStudentOfEnrollment(id) {
-        return this.isInstructorOfEnrollment(id) || this.isStudentOfEnrollment(id);
+        return await this.isInstructorOfEnrollment(id) || await this.isStudentOfEnrollment(id);
     }
 
     async isInstructorOfWeight(id) {
@@ -107,7 +106,7 @@ export class Subject {
     }
 
     async isInstructorOrStudentOfWeight(id) {
-        return this.isInstructorOfWeight(id) || this.isStudentOfWeight(id);
+        return await this.isInstructorOfWeight(id) || await this.isStudentOfWeight(id);
     }
 
     async isInstructorOfAssignment(id) {
@@ -137,7 +136,7 @@ export class Subject {
     }
 
     async isInstructorOrStudentOfAssignment(id) {
-        return this.isInstructorOfAssignment(id) || this.isStudentOfAssignment(id);
+        return await this.isInstructorOfAssignment(id) || await this.isStudentOfAssignment(id);
     }
 }
 
@@ -435,7 +434,7 @@ export class Enrollment {
                        Enrollments.metadata,
                        Courses.name AS course_name,
                        Courses.credits AS course_credits
-                FROM Enrollments INNER JOIN Courses ON Enrollments.course=Courses.id
+                FROM Enrollments INNER JOIN Courses ON Enrollments.course_id=Courses.id
                 WHERE Enrollments.id=${id};
             `);
         } else {
@@ -989,19 +988,19 @@ export class EnrollmentUserLinkToken {
         `);
 
         if (result.rows.length == 1) {
-            return {token: result.rows[0].token, expires: new Date(result.rows[0].timestamp.getTime() + 7*24*60*60*1000)};
+            return {token: result.rows[0].token, expires: new Date(new Date(result.rows[0].timestamp).getTime() + 7*24*60*60*1000)};
         }
     }
 
     static async perform(token, studentId) {
-        const client = db.getClient();
+        const client = await db.getClient();
         let enrollment_id;
         let result;
         try {
             await client.query('BEGIN');
             enrollment_id = await client.query(sql`
                 DELETE FROM EnrollmentUserLinkTokens
-                WHERE token=${token} AND timestamp<${new Date(new Date().getTime() + 7*24*60*60*1000)}
+                WHERE token=${token} AND timestamp>${new Date(new Date().getTime() - 7*24*60*60*1000)}
                 RETURNING enrollment_id;
             `);
 
@@ -1012,14 +1011,14 @@ export class EnrollmentUserLinkToken {
             result = await client.query(sql`
                 UPDATE Enrollments
                 SET student_id=${studentId}
-                WHERE id=${enrollment.rows[0].enrollment_id};
+                WHERE id=${enrollment_id.rows[0].enrollment_id};
             `);
 
             await client.query('COMMIT');
 
         } catch (e) {
             await client.query('ROLLBACK');
-            return
+            return;
         } finally {
             client.release();
         }
@@ -1028,7 +1027,7 @@ export class EnrollmentUserLinkToken {
             throw null;
         }
 
-        return enrollment.rows[0].enrollment_id;
+        return enrollment_id.rows[0].enrollment_id;
         // const result = await db.query(sql`
         //     UPDATE`)
     }

@@ -11,4 +11,43 @@
         <p>User Name: <input type="text" [(ngModel)]="userName" name="User Name"></p>
         <p><button (click)="delete()">Delete</button><input type="submit"></p>
     </form>
+    <details>
+        <summary>Add Course</summary>
+        <form (ngSubmit)="addCourse()">
+            <p>Course Name: <input type="text" [(ngModel)]="courseName" name="Course Name"></p>
+            <p>Course Credits: <input type="number" [(ngModel)]="courseCredits" name="Course Credits"></p>
+            <p><input type="submit"></p>
+        </form>
+    </details>
+    <details>
+        <summary>Link Course</summary>
+        <form (ngSubmit)="linkCourse()">
+            <p>Link Token: <input type="text" [(ngModel)]="linkToken" name="Link Token"></p>
+            <p><input type="submit"></p>
+        </form>
+    </details>
+    <h3>Instructing</h3>
+    <table>
+        <thead><tr><th>Course ID</th><th>Course Name</th><th>Course Credits</th></tr></thead>
+        <tbody>
+            <tr *ngFor="let course of instructing" [routerLink]="['/course', course.id]">
+                <td><a href="javascript:void">{{course.id}}</a></td>
+                <td>{{course.name}}</td>
+                <td>{{course.credits}}</td>
+            </tr>
+        </tbody>
+    </table>
+    <h3>Enrollments</h3>
+    <table>
+        <thead><tr><th>Enroment ID</th><th>Enrolled As</th><th>Course ID</th><th>Course Name</th><th>Course Credits</th></tr></thead>
+        <tbody>
+            <tr *ngFor="let enrollment of enrollments" [routerLink]="['/enrollment', enrollment.id]">
+                <td><a href="javascript:void">{{enrollment.id}}</a></td>
+                <td>{{enrollment.name}}</td>
+                <td>{{enrollment.course_id}}</td>
+                <td>{{enrollment.course?.name}}</td>
+                <td>{{enrollment.course?.credits}}</td>
+            </tr>
+        </tbody>
+    </table>
 </ng-template>

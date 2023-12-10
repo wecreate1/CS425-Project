@@ -201,8 +201,6 @@ paths:
             schema:
               type: object
               properties:
-                id:
-                  type: integer
                 token:
                  type: string
                  format: uuid
